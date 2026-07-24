@@ -1,103 +1,116 @@
-import Image from "next/image";
+import { ShieldCheck } from "lucide-react";
+import Link from "next/link";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
-export default function Home() {
+import { SESSION_COOKIE_NAME } from "@/modules/auth/constants/session-cookie";
+import { LogoutButton } from "@/modules/auth/components/logout-button";
+import { AuthService } from "@/modules/auth/services/auth.service";
+import { AuthorizationService } from "@/modules/auth/services/authorization.service";
+import type { AuthPrincipal } from "@/modules/auth/types/auth.types";
+
+const authService = new AuthService();
+const authorizationService = new AuthorizationService();
+
+export default async function Home() {
+  const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
+
+  if (!token) {
+    redirect("/login");
+  }
+
+  let principal: AuthPrincipal;
+
+  try {
+    principal = await authService.authenticate(token);
+  } catch {
+    redirect("/login");
+  }
+
+  if (principal.mustChangePassword) {
+    redirect("/change-password");
+  }
+
+  const canReadUsers = authorizationService.isAllowed(
+    principal,
+    "usuarios",
+    "read",
+  );
+  const canReadOrganization = authorizationService.isAllowed(
+    principal,
+    "organizacion",
+    "read",
+  );
+  const canReadRisks = principal.permissions.some(
+    (permission) =>
+      permission.module === "riesgos" && permission.canRead,
+  );
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <main className="min-h-screen bg-slate-100 px-4 py-10 dark:bg-slate-950">
+      <section className="mx-auto max-w-5xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-white dark:bg-white dark:text-slate-950">
+              <ShieldCheck aria-hidden="true" className="size-6" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">
+                SGR-EG
+              </p>
+              <h1 className="mt-1 text-2xl font-bold text-slate-950 dark:text-white">
+                Bienvenido, {principal.name}
+              </h1>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                La autenticación y autorización base están activas.
+              </p>
+            </div>
+          </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+          <LogoutButton />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+
+        <div className="mt-8 flex flex-wrap gap-3 border-t border-slate-200 pt-6 dark:border-slate-800">
+          {canReadRisks && (
+            <Link
+              href="/risks"
+              className="inline-flex h-11 items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
+            >
+              Gestionar riesgos
+            </Link>
+          )}
+            {canReadUsers && (
+            <Link
+              href="/users"
+              className="inline-flex h-11 items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
+            >
+              Administrar usuarios
+            </Link>
+            )}
+            {canReadOrganization && (
+              <>
+                <Link
+                  href="/organization"
+                  className="inline-flex h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-900 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:hover:bg-slate-900 dark:focus-visible:outline-white"
+                >
+                  Administrar organización
+                </Link>
+                <Link
+                  href="/settings"
+                  className="inline-flex h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-900 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:hover:bg-slate-900 dark:focus-visible:outline-white"
+                >
+                  Configuración
+                </Link>
+              </>
+            )}
+          <Link
+            href="/change-password"
+            className="inline-flex h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-900 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:hover:bg-slate-900 dark:focus-visible:outline-white"
+          >
+            Cambiar contraseña
+          </Link>
+        </div>
+      </section>
+    </main>
   );
 }

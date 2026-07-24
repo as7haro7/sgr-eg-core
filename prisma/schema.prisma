@@ -1,0 +1,635 @@
+generator client {
+  provider        = "prisma-client"
+  output          = "../generated/prisma"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model acciones_mitigacion {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  plan_id           String            @db.Uuid
+  descripcion       String            @db.VarChar(500)
+  responsable_id    String            @db.Uuid
+  fecha_limite      DateTime          @db.Date
+  avance            Decimal           @default(0) @db.Decimal(5, 2)
+  estado            estado_plan       @default(activo)
+  created_at        DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime          @default(now()) @db.Timestamptz(6)
+  deleted_at        DateTime?         @db.Timestamptz(6)
+  planes_mitigacion planes_mitigacion @relation(fields: [plan_id], references: [id], onUpdate: NoAction)
+  usuarios          usuarios          @relation(fields: [responsable_id], references: [id], onUpdate: NoAction)
+  alertas           alertas[]
+  evidencias        evidencias[]
+
+  @@index([fecha_limite, estado], map: "idx_acciones_vencimiento", where: raw("(deleted_at IS NULL)"))
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model alerta_historial {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  alerta_id  String   @db.Uuid
+  usuario_id String   @db.Uuid
+  evento     String   @default("atencion") @db.VarChar(20)
+  comentario String
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  alertas    alertas  @relation(fields: [alerta_id], references: [id], onUpdate: NoAction)
+  usuarios   usuarios @relation(fields: [usuario_id], references: [id], onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model alertas {
+  id                        String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  regla_codigo              String                     @db.VarChar(10)
+  severidad                 severidad_alerta
+  riesgo_id                 String?                    @db.Uuid
+  control_id                String?                    @db.Uuid
+  plan_id                   String?                    @db.Uuid
+  accion_id                 String?                    @db.Uuid
+  hallazgo_id               String?                    @db.Uuid
+  normativa_id              String?                    @db.Uuid
+  requisito_id              String?                    @db.Uuid
+  evaluacion_id             String?                    @db.Uuid
+  destinatario_id           String                     @db.Uuid
+  mensaje                   String                     @db.VarChar(500)
+  estado                    estado_alerta              @default(pendiente)
+  generada_at               DateTime                   @default(now()) @db.Timestamptz(6)
+  atendida_at               DateTime?                  @db.Timestamptz(6)
+  deleted_at                DateTime?                  @db.Timestamptz(6)
+  alerta_historial          alerta_historial[]
+  acciones_mitigacion       acciones_mitigacion?       @relation(fields: [accion_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  controles                 controles?                 @relation(fields: [control_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  usuarios                  usuarios                   @relation(fields: [destinatario_id], references: [id], onUpdate: NoAction)
+  evaluaciones_cumplimiento evaluaciones_cumplimiento? @relation(fields: [evaluacion_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  hallazgos                 hallazgos?                 @relation(fields: [hallazgo_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  normativas                normativas?                @relation(fields: [normativa_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  planes_mitigacion         planes_mitigacion?         @relation(fields: [plan_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  reglas_alerta             reglas_alerta              @relation(fields: [regla_codigo], references: [codigo], onUpdate: NoAction)
+  requisitos                requisitos?                @relation(fields: [requisito_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  riesgos                   riesgos?                   @relation(fields: [riesgo_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([destinatario_id, estado, severidad, generada_at], map: "idx_alertas_bandeja")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model apetitos_riesgo {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  categoria_id      String            @db.Uuid
+  unidad_id         String?           @db.Uuid
+  umbral            Decimal           @db.Decimal(5, 2)
+  vigente_desde     DateTime          @db.Date
+  vigente_hasta     DateTime?         @db.Date
+  creado_por        String?           @db.Uuid
+  created_at        DateTime          @default(now()) @db.Timestamptz(6)
+  categorias_riesgo categorias_riesgo @relation(fields: [categoria_id], references: [id], onUpdate: NoAction)
+  usuarios          usuarios?         @relation(fields: [creado_por], references: [id], onUpdate: NoAction)
+  unidades_negocio  unidades_negocio? @relation(fields: [unidad_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+}
+
+model auditoria_equipo {
+  auditoria_id String     @db.Uuid
+  usuario_id   String     @db.Uuid
+  funcion      String?    @db.VarChar(100)
+  auditorias   auditorias @relation(fields: [auditoria_id], references: [id], onUpdate: NoAction)
+  usuarios     usuarios   @relation(fields: [usuario_id], references: [id], onUpdate: NoAction)
+
+  @@id([auditoria_id, usuario_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model auditorias {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  objetivo         String             @db.VarChar(500)
+  alcance          String
+  fecha_inicio     DateTime           @db.Date
+  fecha_fin        DateTime?          @db.Date
+  responsable_id   String             @db.Uuid
+  unidad_id        String?            @db.Uuid
+  estado           estado_auditoria   @default(planificada)
+  created_at       DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime           @default(now()) @db.Timestamptz(6)
+  deleted_at       DateTime?          @db.Timestamptz(6)
+  auditoria_equipo auditoria_equipo[]
+  usuarios         usuarios           @relation(fields: [responsable_id], references: [id], onUpdate: NoAction)
+  unidades_negocio unidades_negocio?  @relation(fields: [unidad_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  evidencias       evidencias[]
+  hallazgos        hallazgos[]
+}
+
+model bitacora {
+  id         BigInt    @id @default(autoincrement())
+  usuario_id String?   @db.Uuid
+  accion     String    @db.VarChar(20)
+  entidad    String    @db.VarChar(60)
+  entidad_id String?   @db.Uuid
+  resultado  String    @default("exitoso") @db.VarChar(20)
+  detalles   Json      @default("{}")
+  ip         String?   @db.Inet
+  fecha      DateTime  @default(now()) @db.Timestamptz(6)
+  usuarios   usuarios? @relation(fields: [usuario_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([entidad, entidad_id, fecha], map: "idx_bitacora_consulta")
+  @@index([usuario_id, fecha], map: "idx_bitacora_usuario_fecha")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model categorias_riesgo {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre          String            @unique @db.VarChar(100)
+  descripcion     String?
+  apetito_base    Decimal           @default(10) @db.Decimal(5, 2)
+  estado          estado_activo     @default(activo)
+  created_at      DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime          @default(now()) @db.Timestamptz(6)
+  apetitos_riesgo apetitos_riesgo[]
+  riesgos         riesgos[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model controles {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  riesgo_id   String        @db.Uuid
+  descripcion String        @db.VarChar(500)
+  tipo        tipo_control
+  efectividad Decimal       @db.Decimal(5, 2)
+  es_clave    Boolean       @default(false)
+  estado      estado_activo @default(activo)
+  created_at  DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime      @default(now()) @db.Timestamptz(6)
+  deleted_at  DateTime?     @db.Timestamptz(6)
+  alertas     alertas[]
+  riesgos     riesgos       @relation(fields: [riesgo_id], references: [id], onUpdate: NoAction)
+  evidencias  evidencias[]
+
+  @@index([riesgo_id], map: "idx_controles_riesgo", where: raw("(deleted_at IS NULL)"))
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model correlativos_riesgo {
+  gestion Int @id @db.SmallInt
+  ultimo  Int
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model evaluaciones_cumplimiento {
+  id                                                               String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  requisito_id                                                     String               @db.Uuid
+  unidad_id                                                        String               @db.Uuid
+  periodo_inicio                                                   DateTime             @db.Date
+  periodo_fin                                                      DateTime             @db.Date
+  resultado                                                        resultado_evaluacion
+  evaluador_id                                                     String               @db.Uuid
+  observaciones                                                    String?
+  justificacion_no_aplicable                                       String?
+  plan_accion                                                      String?
+  responsable_plan_id                                              String?              @db.Uuid
+  fecha_limite_plan                                                DateTime?            @db.Date
+  created_at                                                       DateTime             @default(now()) @db.Timestamptz(6)
+  updated_at                                                       DateTime             @default(now()) @db.Timestamptz(6)
+  deleted_at                                                       DateTime?            @db.Timestamptz(6)
+  alertas                                                          alertas[]
+  usuarios_evaluaciones_cumplimiento_evaluador_idTousuarios        usuarios             @relation("evaluaciones_cumplimiento_evaluador_idTousuarios", fields: [evaluador_id], references: [id], onUpdate: NoAction)
+  requisitos                                                       requisitos           @relation(fields: [requisito_id], references: [id], onUpdate: NoAction)
+  usuarios_evaluaciones_cumplimiento_responsable_plan_idTousuarios usuarios?            @relation("evaluaciones_cumplimiento_responsable_plan_idTousuarios", fields: [responsable_plan_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  unidades_negocio                                                 unidades_negocio     @relation(fields: [unidad_id], references: [id], onUpdate: NoAction)
+  evidencias                                                       evidencias[]
+
+  @@unique([requisito_id, unidad_id, periodo_inicio, periodo_fin], map: "uq_evaluacion_periodo", where: raw("(deleted_at IS NULL)"))
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model evidencias {
+  id                        String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tipo                      tipo_evidencia
+  riesgo_id                 String?                    @db.Uuid
+  control_id                String?                    @db.Uuid
+  plan_id                   String?                    @db.Uuid
+  accion_id                 String?                    @db.Uuid
+  auditoria_id              String?                    @db.Uuid
+  hallazgo_id               String?                    @db.Uuid
+  evaluacion_id             String?                    @db.Uuid
+  nombre                    String                     @db.VarChar(255)
+  tipo_mime                 String?                    @db.VarChar(150)
+  tamano_bytes              BigInt?
+  referencia_url            String
+  autor_id                  String                     @db.Uuid
+  created_at                DateTime                   @default(now()) @db.Timestamptz(6)
+  deleted_at                DateTime?                  @db.Timestamptz(6)
+  acciones_mitigacion       acciones_mitigacion?       @relation(fields: [accion_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  auditorias                auditorias?                @relation(fields: [auditoria_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  usuarios                  usuarios                   @relation(fields: [autor_id], references: [id], onUpdate: NoAction)
+  controles                 controles?                 @relation(fields: [control_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  evaluaciones_cumplimiento evaluaciones_cumplimiento? @relation(fields: [evaluacion_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  hallazgos                 hallazgos?                 @relation(fields: [hallazgo_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  planes_mitigacion         planes_mitigacion?         @relation(fields: [plan_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  riesgos                   riesgos?                   @relation(fields: [riesgo_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([accion_id], map: "idx_evidencia_accion", where: raw("((accion_id IS NOT NULL) AND (deleted_at IS NULL))"))
+  @@index([auditoria_id], map: "idx_evidencia_auditoria", where: raw("((auditoria_id IS NOT NULL) AND (deleted_at IS NULL))"))
+  @@index([control_id], map: "idx_evidencia_control", where: raw("((control_id IS NOT NULL) AND (deleted_at IS NULL))"))
+  @@index([evaluacion_id], map: "idx_evidencia_evaluacion", where: raw("((evaluacion_id IS NOT NULL) AND (deleted_at IS NULL))"))
+  @@index([hallazgo_id], map: "idx_evidencia_hallazgo", where: raw("((hallazgo_id IS NOT NULL) AND (deleted_at IS NULL))"))
+  @@index([plan_id], map: "idx_evidencia_plan", where: raw("((plan_id IS NOT NULL) AND (deleted_at IS NULL))"))
+  @@index([riesgo_id], map: "idx_evidencia_riesgo", where: raw("((riesgo_id IS NOT NULL) AND (deleted_at IS NULL))"))
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model hallazgos {
+  id                                          String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auditoria_id                                String             @db.Uuid
+  riesgo_id                                   String?            @db.Uuid
+  severidad                                   severidad_hallazgo
+  condicion                                   String
+  recomendacion                               String
+  respuesta                                   String?
+  responsable_id                              String?            @db.Uuid
+  fecha_limite                                DateTime?          @db.Date
+  fecha_respuesta                             DateTime?          @db.Timestamptz(6)
+  estado                                      estado_hallazgo    @default(abierto)
+  requiere_evidencia_cierre                   Boolean            @default(true)
+  cerrado_por                                 String?            @db.Uuid
+  cerrado_at                                  DateTime?          @db.Timestamptz(6)
+  created_at                                  DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at                                  DateTime           @default(now()) @db.Timestamptz(6)
+  deleted_at                                  DateTime?          @db.Timestamptz(6)
+  alertas                                     alertas[]
+  evidencias                                  evidencias[]
+  auditorias                                  auditorias         @relation(fields: [auditoria_id], references: [id], onUpdate: NoAction)
+  usuarios_hallazgos_cerrado_porTousuarios    usuarios?          @relation("hallazgos_cerrado_porTousuarios", fields: [cerrado_por], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  usuarios_hallazgos_responsable_idTousuarios usuarios?          @relation("hallazgos_responsable_idTousuarios", fields: [responsable_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  riesgos                                     riesgos?           @relation(fields: [riesgo_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([estado, severidad, fecha_limite], map: "idx_hallazgos_seguimiento", where: raw("(deleted_at IS NULL)"))
+}
+
+model modulos {
+  id           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo       String         @unique @db.VarChar(40)
+  nombre       String         @db.VarChar(100)
+  permisos_rol permisos_rol[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model normativas {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre          String           @db.VarChar(200)
+  jurisdiccion    String           @db.VarChar(100)
+  pais_id         String?          @db.Uuid
+  version         String           @db.VarChar(30)
+  vigencia_inicio DateTime         @db.Date
+  vigencia_fin    DateTime?        @db.Date
+  estado          estado_normativa @default(vigente)
+  created_at      DateTime         @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime         @default(now()) @db.Timestamptz(6)
+  deleted_at      DateTime?        @db.Timestamptz(6)
+  alertas         alertas[]
+  paises          paises?          @relation(fields: [pais_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  requisitos      requisitos[]
+
+  @@unique([nombre, jurisdiccion, version])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model paises {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre           String             @unique @db.VarChar(100)
+  codigo_iso       String             @unique @db.Char(2)
+  estado           estado_activo      @default(activo)
+  created_at       DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime           @default(now()) @db.Timestamptz(6)
+  normativas       normativas[]
+  unidades_negocio unidades_negocio[]
+}
+
+model parametros_sistema {
+  clave           String    @id @db.VarChar(80)
+  valor           Json
+  descripcion     String
+  actualizado_por String?   @db.Uuid
+  updated_at      DateTime  @default(now()) @db.Timestamptz(6)
+  usuarios        usuarios? @relation(fields: [actualizado_por], references: [id], onUpdate: NoAction)
+}
+
+model permisos_rol {
+  rol_id           String          @db.Uuid
+  modulo_id        String          @db.Uuid
+  puede_crear      Boolean         @default(false)
+  puede_leer       Boolean         @default(false)
+  puede_actualizar Boolean         @default(false)
+  puede_desactivar Boolean         @default(false)
+  alcance          alcance_permiso @default(unidad)
+  modulos          modulos         @relation(fields: [modulo_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  roles            roles           @relation(fields: [rol_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([rol_id, modulo_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model planes_mitigacion {
+  id                  String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  riesgo_id           String                @db.Uuid
+  responsable_id      String                @db.Uuid
+  descripcion         String                @db.VarChar(500)
+  fecha_limite        DateTime              @db.Date
+  avance              Decimal               @default(0) @db.Decimal(5, 2)
+  estado              estado_plan           @default(activo)
+  created_at          DateTime              @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime              @default(now()) @db.Timestamptz(6)
+  deleted_at          DateTime?             @db.Timestamptz(6)
+  acciones_mitigacion acciones_mitigacion[]
+  alertas             alertas[]
+  evidencias          evidencias[]
+  usuarios            usuarios              @relation(fields: [responsable_id], references: [id], onUpdate: NoAction)
+  riesgos             riesgos               @relation(fields: [riesgo_id], references: [id], onUpdate: NoAction)
+
+  @@index([fecha_limite, estado], map: "idx_planes_vencimiento", where: raw("(deleted_at IS NULL)"))
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model reglas_alerta {
+  codigo    String           @id @db.VarChar(10)
+  nombre    String           @db.VarChar(150)
+  severidad severidad_alerta
+  activa    Boolean          @default(true)
+  alertas   alertas[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model requisitos {
+  id                        String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  normativa_id              String                      @db.Uuid
+  codigo                    String                      @db.VarChar(50)
+  descripcion               String
+  criticidad                criticidad_requisito        @default(media)
+  version                   Int                         @default(1)
+  requisito_raiz_id         String?                     @db.Uuid
+  vigencia_inicio           DateTime                    @db.Date
+  vigencia_fin              DateTime?                   @db.Date
+  vigente                   Boolean                     @default(true)
+  created_at                DateTime                    @default(now()) @db.Timestamptz(6)
+  updated_at                DateTime                    @default(now()) @db.Timestamptz(6)
+  deleted_at                DateTime?                   @db.Timestamptz(6)
+  alertas                   alertas[]
+  evaluaciones_cumplimiento evaluaciones_cumplimiento[]
+  normativas                normativas                  @relation(fields: [normativa_id], references: [id], onUpdate: NoAction)
+  requisitos                requisitos?                 @relation("requisitosTorequisitos", fields: [requisito_raiz_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  other_requisitos          requisitos[]                @relation("requisitosTorequisitos")
+
+  @@unique([normativa_id, codigo, version])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model riesgos {
+  id                                        String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo                                    String              @unique @default(dbgenerated("generar_codigo_riesgo()")) @db.VarChar(30)
+  titulo                                    String              @db.VarChar(200)
+  descripcion                               String
+  causas                                    String?
+  consecuencias                             String?
+  objetivos_afectados                       String?
+  categoria_id                              String              @db.Uuid
+  unidad_id                                 String              @db.Uuid
+  propietario_id                            String?             @db.Uuid
+  creado_por                                String              @db.Uuid
+  probabilidad                              Int                 @db.SmallInt
+  impacto                                   Int                 @db.SmallInt
+  nivel_inherente                           Int?                @default(dbgenerated("(probabilidad * impacto)")) @db.SmallInt
+  nivel_residual                            Decimal             @default(0) @db.Decimal(6, 2)
+  exposicion_financiera                     Decimal?            @db.Decimal(18, 2)
+  moneda                                    String?             @db.Char(3)
+  estado                                    estado_riesgo       @default(identificado)
+  justificacion_aceptacion                  String?
+  aceptado_por                              String?             @db.Uuid
+  aceptado_at                               DateTime?           @db.Timestamptz(6)
+  fecha_revision                            DateTime?           @db.Date
+  created_at                                DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at                                DateTime            @default(now()) @db.Timestamptz(6)
+  deleted_at                                DateTime?           @db.Timestamptz(6)
+  alertas                                   alertas[]
+  controles                                 controles[]
+  evidencias                                evidencias[]
+  hallazgos                                 hallazgos[]
+  planes_mitigacion                         planes_mitigacion[]
+  usuarios_riesgos_aceptado_porTousuarios   usuarios?           @relation("riesgos_aceptado_porTousuarios", fields: [aceptado_por], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  categorias_riesgo                         categorias_riesgo   @relation(fields: [categoria_id], references: [id], onUpdate: NoAction)
+  usuarios_riesgos_creado_porTousuarios     usuarios            @relation("riesgos_creado_porTousuarios", fields: [creado_por], references: [id], onUpdate: NoAction)
+  usuarios_riesgos_propietario_idTousuarios usuarios?           @relation("riesgos_propietario_idTousuarios", fields: [propietario_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  unidades_negocio                          unidades_negocio    @relation(fields: [unidad_id], references: [id], onUpdate: NoAction)
+
+  @@index([unidad_id, categoria_id, estado, created_at], map: "idx_riesgos_filtros")
+  @@index([propietario_id], map: "idx_riesgos_propietario", where: raw("(deleted_at IS NULL)"))
+}
+
+model roles {
+  id            String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre        String          @unique @db.VarChar(50)
+  descripcion   String?
+  estado        estado_activo   @default(activo)
+  created_at    DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime        @default(now()) @db.Timestamptz(6)
+  permisos_rol  permisos_rol[]
+  usuario_roles usuario_roles[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model sesiones {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuario_id  String        @db.Uuid
+  token_hash  String        @unique
+  estado      estado_sesion @default(activa)
+  emitida_at  DateTime      @default(now()) @db.Timestamptz(6)
+  expira_at   DateTime      @db.Timestamptz(6)
+  revocada_at DateTime?     @db.Timestamptz(6)
+  ip          String?       @db.Inet
+  user_agent  String?       @db.VarChar(500)
+  usuarios    usuarios      @relation(fields: [usuario_id], references: [id], onUpdate: NoAction)
+
+  @@index([usuario_id, estado], map: "idx_sesiones_usuario_estado")
+}
+
+model transiciones_riesgo {
+  origen  estado_riesgo
+  destino estado_riesgo
+
+  @@id([origen, destino])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model unidades_negocio {
+  id                        String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre                    String                      @db.VarChar(150)
+  pais_id                   String                      @db.Uuid
+  moneda                    String                      @default("USD") @db.Char(3)
+  estado                    estado_activo               @default(activo)
+  created_at                DateTime                    @default(now()) @db.Timestamptz(6)
+  updated_at                DateTime                    @default(now()) @db.Timestamptz(6)
+  apetitos_riesgo           apetitos_riesgo[]
+  auditorias                auditorias[]
+  evaluaciones_cumplimiento evaluaciones_cumplimiento[]
+  riesgos                   riesgos[]
+  paises                    paises                      @relation(fields: [pais_id], references: [id], onUpdate: NoAction)
+  usuario_unidades          usuario_unidades[]
+
+  @@unique([nombre, pais_id])
+}
+
+model usuario_roles {
+  usuario_id String   @db.Uuid
+  rol_id     String   @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  roles      roles    @relation(fields: [rol_id], references: [id], onUpdate: NoAction)
+  usuarios   usuarios @relation(fields: [usuario_id], references: [id], onUpdate: NoAction)
+
+  @@id([usuario_id, rol_id])
+}
+
+/// PostgreSQL enforces one principal unit per user with the partial unique index
+/// uq_usuario_unidad_principal. It is intentionally omitted here because Prisma
+/// would otherwise infer an incorrect one-to-one relation.
+model usuario_unidades {
+  usuario_id       String           @db.Uuid
+  unidad_id        String           @db.Uuid
+  es_principal     Boolean          @default(false)
+  created_at       DateTime         @default(now()) @db.Timestamptz(6)
+  unidades_negocio unidades_negocio @relation(fields: [unidad_id], references: [id], onUpdate: NoAction)
+  usuarios         usuarios         @relation(fields: [usuario_id], references: [id], onUpdate: NoAction)
+
+  @@id([usuario_id, unidad_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model usuarios {
+  id                                                                                String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre                                                                            String                      @db.VarChar(150)
+  correo                                                                            String                      @unique(map: "uq_usuario_correo") @db.VarChar(254)
+  password_hash                                                                     String
+  estado                                                                            estado_activo               @default(activo)
+  debe_cambiar_password                                                             Boolean                     @default(false)
+  password_changed_at                                                               DateTime                    @default(now()) @db.Timestamptz(6)
+  ultimo_login                                                                      DateTime?                   @db.Timestamptz(6)
+  created_at                                                                        DateTime                    @default(now()) @db.Timestamptz(6)
+  updated_at                                                                        DateTime                    @default(now()) @db.Timestamptz(6)
+  deleted_at                                                                        DateTime?                   @db.Timestamptz(6)
+  acciones_mitigacion                                                               acciones_mitigacion[]
+  alerta_historial                                                                  alerta_historial[]
+  alertas                                                                           alertas[]
+  apetitos_riesgo                                                                   apetitos_riesgo[]
+  auditoria_equipo                                                                  auditoria_equipo[]
+  auditorias                                                                        auditorias[]
+  bitacora                                                                          bitacora[]
+  evaluaciones_cumplimiento_evaluaciones_cumplimiento_evaluador_idTousuarios        evaluaciones_cumplimiento[] @relation("evaluaciones_cumplimiento_evaluador_idTousuarios")
+  evaluaciones_cumplimiento_evaluaciones_cumplimiento_responsable_plan_idTousuarios evaluaciones_cumplimiento[] @relation("evaluaciones_cumplimiento_responsable_plan_idTousuarios")
+  evidencias                                                                        evidencias[]
+  hallazgos_hallazgos_cerrado_porTousuarios                                         hallazgos[]                 @relation("hallazgos_cerrado_porTousuarios")
+  hallazgos_hallazgos_responsable_idTousuarios                                      hallazgos[]                 @relation("hallazgos_responsable_idTousuarios")
+  parametros_sistema                                                                parametros_sistema[]
+  planes_mitigacion                                                                 planes_mitigacion[]
+  riesgos_riesgos_aceptado_porTousuarios                                            riesgos[]                   @relation("riesgos_aceptado_porTousuarios")
+  riesgos_riesgos_creado_porTousuarios                                              riesgos[]                   @relation("riesgos_creado_porTousuarios")
+  riesgos_riesgos_propietario_idTousuarios                                          riesgos[]                   @relation("riesgos_propietario_idTousuarios")
+  sesiones                                                                          sesiones[]
+  usuario_roles                                                                     usuario_roles[]
+  usuario_unidades                                                                  usuario_unidades[]
+}
+
+enum alcance_permiso {
+  global
+  unidad
+  propio
+  asignado
+}
+
+enum criticidad_requisito {
+  baja
+  media
+  alta
+}
+
+enum estado_activo {
+  activo
+  inactivo
+}
+
+enum estado_alerta {
+  pendiente
+  atendida
+  descartada
+}
+
+enum estado_auditoria {
+  planificada
+  en_ejecucion
+  cerrada
+  cancelada
+}
+
+enum estado_hallazgo {
+  abierto
+  en_seguimiento
+  cerrado
+}
+
+enum estado_normativa {
+  vigente
+  derogada
+}
+
+enum estado_plan {
+  activo
+  vencido
+  completado
+  cancelado
+}
+
+enum estado_riesgo {
+  identificado
+  en_evaluacion
+  abierto
+  en_tratamiento
+  monitoreo
+  aceptado
+  cerrado
+  cancelado
+}
+
+enum estado_sesion {
+  activa
+  revocada
+  expirada
+}
+
+enum resultado_evaluacion {
+  conforme
+  parcialmente_conforme
+  no_conforme
+  no_aplicable
+}
+
+enum severidad_alerta {
+  media
+  alta
+  critica
+}
+
+enum severidad_hallazgo {
+  baja
+  media
+  alta
+  critica
+}
+
+enum tipo_control {
+  preventivo
+  detectivo
+  correctivo
+}
+
+enum tipo_evidencia {
+  archivo
+  enlace
+}
