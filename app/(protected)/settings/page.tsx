@@ -1,13 +1,9 @@
 import { ArrowLeft, Settings2 } from "lucide-react";
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 
-import { SESSION_COOKIE_NAME } from "@/modules/auth/constants/session-cookie";
-import { AuthService } from "@/modules/auth/services/auth.service";
 import { AuthorizationService } from "@/modules/auth/services/authorization.service";
-import type { AuthPrincipal } from "@/modules/auth/types/auth.types";
+import { getApplicationPrincipal } from "@/modules/auth/services/current-principal.service";
 import { BusinessUnitService } from "@/modules/business-units/services/business-unit.service";
 import { RiskConfigurationForms } from "@/modules/risks/components/risk-configuration-forms";
 import { RiskConfigurationService } from "@/modules/risks/services/risk-configuration.service";
@@ -20,30 +16,13 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-const authService = new AuthService();
 const authorizationService = new AuthorizationService();
 const businessUnitService = new BusinessUnitService();
 const riskConfigurationService = new RiskConfigurationService();
 const systemParameterService = new SystemParameterService();
 
 export default async function SettingsPage() {
-  const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
-
-  if (!token) {
-    redirect("/login");
-  }
-
-  let principal: AuthPrincipal;
-
-  try {
-    principal = await authService.authenticate(token);
-  } catch {
-    redirect("/login");
-  }
-
-  if (principal.mustChangePassword) {
-    redirect("/change-password");
-  }
+  const principal = await getApplicationPrincipal();
 
   authorizationService.assertAllowed(
     principal,
@@ -69,8 +48,8 @@ export default async function SettingsPage() {
   ]);
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-8 dark:bg-slate-950">
-      <section className="mx-auto max-w-7xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <div className="w-full">
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <header className="border-b border-slate-200 p-6 dark:border-slate-800">
           <Link
             href="/"
@@ -189,7 +168,7 @@ export default async function SettingsPage() {
           </div>
         </section>
       </section>
-    </main>
+    </div>
   );
 }
 

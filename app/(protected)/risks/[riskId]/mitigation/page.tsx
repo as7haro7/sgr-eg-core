@@ -1,13 +1,9 @@
 import { ArrowLeft, SlidersHorizontal } from "lucide-react";
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 
-import { SESSION_COOKIE_NAME } from "@/modules/auth/constants/session-cookie";
-import { AuthService } from "@/modules/auth/services/auth.service";
 import { AuthorizationService } from "@/modules/auth/services/authorization.service";
-import type { AuthPrincipal } from "@/modules/auth/types/auth.types";
+import { getApplicationPrincipal } from "@/modules/auth/services/current-principal.service";
 import { ControlPanel } from "@/modules/controls/components/control-panel";
 import { ControlService } from "@/modules/controls/services/control.service";
 import { MitigationPanel } from "@/modules/mitigation/components/mitigation-panel";
@@ -20,7 +16,6 @@ export const metadata: Metadata = {
 };
 export const dynamic = "force-dynamic";
 
-const authService = new AuthService();
 const authorizationService = new AuthorizationService();
 const controlService = new ControlService();
 const mitigationService = new MitigationService();
@@ -31,18 +26,7 @@ interface PageProps {
 }
 
 export default async function RiskMitigationPage({ params }: PageProps) {
-  const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
-
-  if (!token) redirect("/login");
-
-  let principal: AuthPrincipal;
-  try {
-    principal = await authService.authenticate(token);
-  } catch {
-    redirect("/login");
-  }
-
-  if (principal.mustChangePassword) redirect("/change-password");
+  const principal = await getApplicationPrincipal();
 
   const riskId = riskIdSchema.parse((await params).riskId);
   const risk = await riskService.getById(riskId, principal);
@@ -87,8 +71,8 @@ export default async function RiskMitigationPage({ params }: PageProps) {
     : [];
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-8 dark:bg-slate-950">
-      <section className="mx-auto max-w-7xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <div className="w-full">
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <header className="border-b border-slate-200 p-6 dark:border-slate-800">
           <Link
             href={`/risks/${risk.id}`}
@@ -132,6 +116,6 @@ export default async function RiskMitigationPage({ params }: PageProps) {
           </div>
         </div>
       </section>
-    </main>
+    </div>
   );
 }
