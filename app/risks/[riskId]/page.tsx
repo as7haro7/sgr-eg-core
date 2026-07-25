@@ -65,6 +65,16 @@ export default async function RiskDetailPage({
       assigneeIds: risk.owner ? [risk.owner.id] : [],
     },
   );
+  const canReadMitigation = authorizationService.isAllowed(
+    principal,
+    "mitigacion",
+    "read",
+    {
+      unitId: risk.unit.id,
+      ownerId: risk.createdBy.id,
+      assigneeIds: risk.owner ? [risk.owner.id] : [],
+    },
+  );
   const hasGlobalUpdate = principal.permissions.some(
     (permission) =>
       permission.module === "riesgos" &&
@@ -134,6 +144,17 @@ export default async function RiskDetailPage({
               Aprobado por {risk.acceptance.approvedBy.name}; revisión{" "}
               {formatDate(risk.acceptance.reviewDate)}
             </p>
+          </section>
+        )}
+
+        {canReadMitigation && (
+          <section className="border-t border-slate-200 p-6 dark:border-slate-800">
+            <Link
+              href={`/risks/${risk.id}/mitigation`}
+              className="inline-flex h-11 items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white dark:bg-white dark:text-slate-950"
+            >
+              Gestionar controles y mitigación
+            </Link>
           </section>
         )}
 
