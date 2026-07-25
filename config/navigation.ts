@@ -1,4 +1,5 @@
 import {
+  BookCheck,
   Building2,
   ClipboardCheck,
   Gauge,
@@ -12,6 +13,7 @@ import type { AuthPrincipal } from "@/modules/auth/types/auth.types";
 export type NavigationIcon =
   | "home"
   | "audits"
+  | "compliance"
   | "risks"
   | "users"
   | "organization"
@@ -20,6 +22,7 @@ export type NavigationIcon =
 export const navigationIcons = {
   home: Gauge,
   audits: ClipboardCheck,
+  compliance: BookCheck,
   risks: ShieldAlert,
   users: UsersRound,
   organization: Building2,
@@ -50,6 +53,12 @@ export const navigationItems: readonly NavigationItem[] = [
     href: "/audits",
     icon: "audits",
     module: "auditorias",
+  },
+  {
+    label: "Cumplimiento",
+    href: "/compliance",
+    icon: "compliance",
+    module: "cumplimiento",
   },
   {
     label: "Usuarios",
