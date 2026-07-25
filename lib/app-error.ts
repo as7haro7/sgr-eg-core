@@ -2,6 +2,7 @@ import type { ErrorDetail } from "@/types/api-response";
 
 export type AppErrorCode =
   | "AUTHENTICATION_REQUIRED"
+  | "CONFLICT"
   | "FORBIDDEN"
   | "INTERNAL_ERROR"
   | "INVALID_CURRENT_PASSWORD"

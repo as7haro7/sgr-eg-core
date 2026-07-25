@@ -1,4 +1,8 @@
-import { ArrowLeft, ClipboardCheck, UsersRound } from "lucide-react";
+import {
+  ArrowLeft,
+  ClipboardCheck,
+  UsersRound,
+} from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -10,6 +14,8 @@ import { getApplicationPrincipal } from "@/modules/auth/services/current-princip
 import { auditStatusLabels } from "@/modules/audits/constants/audit";
 import { AuditService } from "@/modules/audits/services/audit.service";
 import { auditIdSchema } from "@/modules/audits/validators/audit.validator";
+import { FindingPanel } from "@/modules/findings/components/finding-panel";
+import { FindingService } from "@/modules/findings/services/finding.service";
 import { EvidencePanel } from "@/modules/shared/components/evidence-panel";
 import { EvidenceService } from "@/modules/shared/services/evidence.service";
 
@@ -22,6 +28,7 @@ export const dynamic = "force-dynamic";
 const auditService = new AuditService();
 const authorizationService = new AuthorizationService();
 const evidenceService = new EvidenceService();
+const findingService = new FindingService();
 
 interface AuditDetailPageProps {
   params: Promise<{ auditId: string }>;
@@ -47,7 +54,7 @@ export default async function AuditDetailPage({
   const requestedSection = Array.isArray(rawSection)
     ? rawSection[0]
     : rawSection;
-  const activeSection = ["team", "evidence"].includes(
+  const activeSection = ["team", "findings", "evidence"].includes(
     requestedSection ?? "",
   )
     ? requestedSection!
@@ -74,6 +81,26 @@ export default async function AuditDetailPage({
     ),
     evidenceService.getMaxFileSize(),
   ]);
+  const [findings, findingUsers, findingRiskOptions] =
+    activeSection === "findings"
+      ? await Promise.all([
+          findingService.list(audit.id, principal),
+          auditService.listUserOptions(),
+          findingService.listRiskOptions(audit.id, principal),
+        ])
+      : [[], [], []];
+  const evidenceByFinding =
+    activeSection === "findings"
+      ? await Promise.all(
+          findings.map(async (finding) => ({
+            findingId: finding.id,
+            items: await evidenceService.list(
+              { entityType: "finding", entityId: finding.id },
+              principal,
+            ),
+          })),
+        )
+      : [];
 
   return (
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -114,6 +141,11 @@ export default async function AuditDetailPage({
             id: "team",
             label: "Equipo auditor",
             href: `/audits/${audit.id}?section=team`,
+          },
+          {
+            id: "findings",
+            label: `Hallazgos (${audit.findingCount})`,
+            href: `/audits/${audit.id}?section=findings`,
           },
           {
             id: "evidence",
@@ -166,6 +198,21 @@ export default async function AuditDetailPage({
           entityId={audit.id}
           evidence={evidence}
           canCreate={canUpdate}
+          maxFileSizeBytes={maxEvidenceFileSize}
+          storageConfigured={isEvidenceStorageConfigured()}
+        />
+      </section>
+      )}
+
+      {activeSection === "findings" && (
+      <section className="border-t border-slate-200 p-6">
+        <FindingPanel
+          auditId={audit.id}
+          findings={findings}
+          users={findingUsers}
+          riskOptions={findingRiskOptions}
+          evidenceByFinding={evidenceByFinding}
+          canUpdate={canUpdate}
           maxFileSizeBytes={maxEvidenceFileSize}
           storageConfigured={isEvidenceStorageConfigured()}
         />
