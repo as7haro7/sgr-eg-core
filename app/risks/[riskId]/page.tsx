@@ -15,6 +15,8 @@ import { riskStatusLabels } from "@/modules/risks/constants/risk-status";
 import { RiskConfigurationService } from "@/modules/risks/services/risk-configuration.service";
 import { RiskService } from "@/modules/risks/services/risk.service";
 import { riskIdSchema } from "@/modules/risks/validators/risk.validator";
+import { EvidencePanel } from "@/modules/shared/components/evidence-panel";
+import { EvidenceService } from "@/modules/shared/services/evidence.service";
 
 export const metadata: Metadata = {
   title: "Detalle de riesgo | SGR-EG",
@@ -27,6 +29,7 @@ const authorizationService = new AuthorizationService();
 const businessUnitService = new BusinessUnitService();
 const riskConfigurationService = new RiskConfigurationService();
 const riskService = new RiskService();
+const evidenceService = new EvidenceService();
 
 interface RiskDetailPageProps {
   params: Promise<{ riskId: string }>;
@@ -80,6 +83,10 @@ export default async function RiskDetailPage({
       permission.module === "riesgos" &&
       permission.canUpdate &&
       permission.scope === "global",
+  );
+  const evidence = await evidenceService.list(
+    { entityType: "risk", entityId: risk.id },
+    principal,
   );
   const [categories, units, owners, transitions] = canUpdate
     ? await Promise.all([
@@ -157,6 +164,16 @@ export default async function RiskDetailPage({
             </Link>
           </section>
         )}
+
+        <section className="border-t border-slate-200 p-6 dark:border-slate-800">
+          <h2 className="mb-4 text-lg font-bold">Evidencias</h2>
+          <EvidencePanel
+            entityType="risk"
+            entityId={risk.id}
+            evidence={evidence}
+            canCreate={canUpdate}
+          />
+        </section>
 
         {canUpdate && (
           <>
