@@ -6,6 +6,7 @@ import { AuthorizationService } from "@/modules/auth/services/authorization.serv
 import { getApplicationPrincipal } from "@/modules/auth/services/current-principal.service";
 import { BusinessUnitService } from "@/modules/business-units/services/business-unit.service";
 import { RoleService } from "@/modules/roles/services/role.service";
+import { parsePageQuery } from "@/modules/shared/validators/query.validator";
 import { CreateUserDialog } from "@/modules/users/components/create-user-dialog";
 import { UserActions } from "@/modules/users/components/user-actions";
 import { UserService } from "@/modules/users/services/user.service";
@@ -32,7 +33,7 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
   authorizationService.assertAllowed(principal, "usuarios", "read");
 
   const rawSearchParams = await searchParams;
-  const query = listUsersQuerySchema.parse({
+  const query = parsePageQuery(listUsersQuerySchema, {
     page: Array.isArray(rawSearchParams.page)
       ? rawSearchParams.page[0]
       : rawSearchParams.page,

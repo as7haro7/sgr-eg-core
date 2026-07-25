@@ -15,6 +15,7 @@ import {
 } from "@/modules/risks/constants/risk-status";
 import { RiskConfigurationService } from "@/modules/risks/services/risk-configuration.service";
 import { RiskService } from "@/modules/risks/services/risk.service";
+import { parsePageQuery } from "@/modules/shared/validators/query.validator";
 
 export const dynamic = "force-dynamic";
 
@@ -57,7 +58,7 @@ export default async function Home({ searchParams }: HomePageProps) {
     );
   }
   const raw = await searchParams;
-  const filter = dashboardFilterSchema.parse({
+  const filter = parsePageQuery(dashboardFilterSchema, {
     unitId: first(raw.unitId),
     countryId: first(raw.countryId),
     categoryId: first(raw.categoryId),

@@ -1,4 +1,11 @@
 import { z } from "zod";
+import {
+  optionalQueryEnum,
+  optionalQueryText,
+  optionalQueryUuid,
+  queryPageSchema,
+  queryPageSizeSchema,
+} from "@/modules/shared/validators/query.validator";
 
 const dateSchema = z.union([
   z.date(),
@@ -60,11 +67,11 @@ export const updateRegulationSchema = z
   );
 
 export const listRegulationsQuerySchema = z.object({
-  page: z.coerce.number().int().positive().default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20),
-  search: z.string().trim().optional(),
-  status: z.enum(["vigente", "derogada"]).optional(),
-  countryId: z.string().uuid().optional(),
+  page: queryPageSchema,
+  pageSize: queryPageSizeSchema,
+  search: optionalQueryText(),
+  status: optionalQueryEnum(["vigente", "derogada"]),
+  countryId: optionalQueryUuid,
 });
 
 // ── Requisitos ───────────────────────────────────────────────────────────────
@@ -100,9 +107,9 @@ export const updateRequirementSchema = z
   );
 
 export const listRequirementsQuerySchema = z.object({
-  page: z.coerce.number().int().positive().default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20),
-  search: z.string().trim().optional(),
+  page: queryPageSchema,
+  pageSize: queryPageSizeSchema,
+  search: optionalQueryText(),
   active: z
     .string()
     .optional()
@@ -113,6 +120,7 @@ export const regulationIdSchema = z.string().uuid("La normativa no es válida.")
 export const requirementIdSchema = z.string().uuid("El requisito no es válido.");
 
 export type CreateRegulationInput = z.output<typeof createRegulationSchema>;
+export type CreateRegulationFormInput = z.input<typeof createRegulationSchema>;
 export type UpdateRegulationInput = z.output<typeof updateRegulationSchema>;
 export type ListRegulationsQuery = z.output<typeof listRegulationsQuerySchema>;
 export type CreateRequirementInput = z.output<typeof createRequirementSchema>;

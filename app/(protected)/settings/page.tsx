@@ -60,6 +60,11 @@ export default async function SettingsPage({
     "organizacion",
     "update",
   );
+  const canRunAlertEngine = authorizationService.isAllowed(
+    principal,
+    "alertas",
+    "update",
+  );
   const [categories, appetites, units, parameters] = await Promise.all([
     riskConfigurationService.listCategories(),
     riskConfigurationService.listAppetites(),
@@ -234,7 +239,7 @@ export default async function SettingsPage({
               Controles manuales para tareas programadas y procesos en segundo plano.
             </p>
             <div className="mt-6">
-              {canCreate ? (
+              {canRunAlertEngine ? (
                 <AlertEngineButton />
               ) : (
                 <EmptyState message="No tienes permisos para ejecutar procesos del sistema." />

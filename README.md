@@ -45,15 +45,6 @@ interactiva:
 npm run bootstrap:admin -- --name "Administrador" --email "admin@example.com"
 ```
 
-## Docker
-
-```bash
-docker compose up --build
-```
-
-El contenedor aplica las migraciones y la semilla idempotente antes de iniciar.
-Para cargar archivos reales se deben proporcionar las variables de Supabase.
-
 ## Datos de demostración
 
 La semilla usa exclusivamente información ficticia. Usuarios disponibles:
@@ -83,7 +74,7 @@ CP-10. `tests/database.integration.test.ts` valida restricciones, triggers e
 inmutabilidad sobre PostgreSQL cuando `RUN_DB_TESTS=true`. El pipeline levanta
 PostgreSQL 16, aplica la migración y la semilla, ejecuta ambas suites, recorre
 login/sesión/logout mediante `npm run test:e2e`, analiza secretos y
-dependencias, compila el contenedor y genera el artefacto de demostración.
+dependencias, compila la aplicación y genera el artefacto de demostración.
 
 ## Alertas
 

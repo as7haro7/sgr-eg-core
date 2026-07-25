@@ -1,8 +1,10 @@
 import { ArrowLeft, PencilLine } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 import { AuthorizationService } from "@/modules/auth/services/authorization.service";
+import { notFoundOnMissing } from "@/lib/page-error";
 import { getApplicationPrincipal } from "@/modules/auth/services/current-principal.service";
 import { BusinessUnitService } from "@/modules/business-units/services/business-unit.service";
 import { RiskForm } from "@/modules/risks/components/risk-form";
@@ -24,8 +26,12 @@ interface EditRiskPageProps {
 
 export default async function EditRiskPage({ params }: EditRiskPageProps) {
   const principal = await getApplicationPrincipal();
-  const riskId = riskIdSchema.parse((await params).riskId);
-  const risk = await riskService.getById(riskId, principal);
+  const parsedRiskId = riskIdSchema.safeParse((await params).riskId);
+  if (!parsedRiskId.success) notFound();
+  const riskId = parsedRiskId.data;
+  const risk = await notFoundOnMissing(
+    riskService.getById(riskId, principal),
+  );
   authorizationService.assertAllowed(principal, "riesgos", "update", {
     unitId: risk.unit.id,
     ownerId: risk.createdBy.id,

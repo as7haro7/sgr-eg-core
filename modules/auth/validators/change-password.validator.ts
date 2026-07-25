@@ -1,13 +1,12 @@
 import { z } from "zod";
+import { securePasswordSchema } from "@/modules/auth/validators/password.validator";
 
 export const changePasswordSchema = z
   .object({
     currentPassword: z
       .string()
       .min(1, "La contraseña actual es obligatoria."),
-    newPassword: z
-      .string()
-      .min(1, "La nueva contraseña es obligatoria."),
+    newPassword: securePasswordSchema,
     passwordConfirmation: z
       .string()
       .min(1, "La confirmación de contraseña es obligatoria."),

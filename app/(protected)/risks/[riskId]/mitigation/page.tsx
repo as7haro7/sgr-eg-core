@@ -1,8 +1,10 @@
 import { ArrowLeft, SlidersHorizontal } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 import { SectionTabs } from "@/components/ui/section-tabs";
+import { notFoundOnMissing } from "@/lib/page-error";
 import { AuthorizationService } from "@/modules/auth/services/authorization.service";
 import { getApplicationPrincipal } from "@/modules/auth/services/current-principal.service";
 import { ControlPanel } from "@/modules/controls/components/control-panel";
@@ -29,8 +31,12 @@ interface PageProps {
 export default async function RiskMitigationPage({ params }: PageProps) {
   const principal = await getApplicationPrincipal();
 
-  const riskId = riskIdSchema.parse((await params).riskId);
-  const risk = await riskService.getById(riskId, principal);
+  const parsedRiskId = riskIdSchema.safeParse((await params).riskId);
+  if (!parsedRiskId.success) notFound();
+  const riskId = parsedRiskId.data;
+  const risk = await notFoundOnMissing(
+    riskService.getById(riskId, principal),
+  );
   const context = {
     unitId: risk.unit.id,
     ownerId: risk.createdBy.id,

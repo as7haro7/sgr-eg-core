@@ -1,6 +1,13 @@
 import { z } from "zod";
 
 import { evaluationResults } from "@/modules/compliance/constants/evaluation";
+import {
+  optionalQueryEnum,
+  optionalQueryText,
+  optionalQueryUuid,
+  queryPageSchema,
+  queryPageSizeSchema,
+} from "@/modules/shared/validators/query.validator";
 
 const dateSchema = z
   .string()
@@ -84,11 +91,11 @@ export const createEvaluationSchema = z
   });
 
 export const listEvaluationsQuerySchema = z.object({
-  page: z.coerce.number().int().positive().default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20),
-  search: z.string().trim().optional(),
-  result: z.enum(evaluationResults).optional(),
-  unitId: z.string().uuid().optional(),
+  page: queryPageSchema,
+  pageSize: queryPageSizeSchema,
+  search: optionalQueryText(),
+  result: optionalQueryEnum(evaluationResults),
+  unitId: optionalQueryUuid,
 });
 
 export const evaluationIdSchema = z

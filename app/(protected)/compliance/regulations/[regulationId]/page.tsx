@@ -4,9 +4,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { StatusBadge } from "@/components/ui/status-badge";
+import { notFoundOnMissing } from "@/lib/page-error";
 import { getApplicationPrincipal } from "@/modules/auth/services/current-principal.service";
 import { RegulationService } from "@/modules/regulations/services/regulation.service";
 import { RequirementList } from "@/modules/regulations/components/requirement-list";
+import { regulationIdSchema } from "@/modules/regulations/validators/regulation.validator";
 
 export const metadata: Metadata = {
   title: "Detalle de Normativa | SGR-EG",
@@ -23,10 +25,16 @@ export default async function RegulationDetailPage({
   params,
 }: RegulationDetailPageProps) {
   const principal = await getApplicationPrincipal();
-  const { regulationId } = await params;
+  const parsedRegulationId = regulationIdSchema.safeParse(
+    (await params).regulationId,
+  );
+  if (!parsedRegulationId.success) notFound();
+  const regulationId = parsedRegulationId.data;
   
   try {
-    const regulation = await regulationService.getRegulationById(regulationId, principal);
+    const regulation = await notFoundOnMissing(
+      regulationService.getRegulationById(regulationId, principal),
+    );
     const requirementsResult = await regulationService.listRequirements(
       regulationId,
       { page: 1, pageSize: 500, active: undefined }, 
@@ -36,6 +44,9 @@ export default async function RegulationDetailPage({
 
     const canUpdate = principal.permissions.some(
       ({ module, canUpdate }) => module === "cumplimiento" && canUpdate,
+    );
+    const canCreate = principal.permissions.some(
+      ({ module, canCreate }) => module === "cumplimiento" && canCreate,
     );
 
     return (
@@ -108,7 +119,9 @@ export default async function RegulationDetailPage({
           
           <div className="p-6">
             <RequirementList 
+              regulationId={regulationId}
               requirements={requirements} 
+              canCreate={canCreate}
               canUpdate={canUpdate} 
             />
           </div>

@@ -7,6 +7,7 @@ import { AlertService } from "@/modules/alerts/services/alert.service";
 import { listAlertsQuerySchema } from "@/modules/alerts/validators/alert.validator";
 import { AlertAttendModal } from "@/modules/alerts/components/alert-attend-modal";
 import { AlertReopenModal } from "@/modules/alerts/components/alert-reopen-modal";
+import { parsePageQuery } from "@/modules/shared/validators/query.validator";
 
 export const metadata: Metadata = {
   title: "Alertas | SGR-EG",
@@ -27,7 +28,7 @@ export default async function AlertsPage({ searchParams }: AlertsPageProps) {
   const principal = await getApplicationPrincipal();
   const raw = await searchParams;
   
-  const query = listAlertsQuerySchema.parse({
+  const query = parsePageQuery(listAlertsQuerySchema, {
     page: first(raw.page),
     pageSize: first(raw.pageSize),
     status: first(raw.status) || undefined,

@@ -10,6 +10,7 @@ import {
 } from "@/modules/compliance/constants/evaluation";
 import { EvaluationService } from "@/modules/compliance/services/evaluation.service";
 import { listEvaluationsQuerySchema } from "@/modules/compliance/validators/evaluation.validator";
+import { parsePageQuery } from "@/modules/shared/validators/query.validator";
 
 export const metadata: Metadata = {
   title: "Cumplimiento | SGR-EG",
@@ -45,7 +46,7 @@ export default async function CompliancePage({
 }: CompliancePageProps) {
   const principal = await getApplicationPrincipal();
   const raw = await searchParams;
-  const query = listEvaluationsQuerySchema.parse({
+  const query = parsePageQuery(listEvaluationsQuerySchema, {
     page: first(raw.page),
     pageSize: first(raw.pageSize),
     search: first(raw.search),

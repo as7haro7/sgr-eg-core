@@ -1,6 +1,13 @@
 import { z } from "zod";
 
 import { riskStatuses } from "@/modules/risks/constants/risk-status";
+import {
+  optionalQueryEnum,
+  optionalQueryText,
+  optionalQueryUuid,
+  queryPageSchema,
+  queryPageSizeSchema,
+} from "@/modules/shared/validators/query.validator";
 
 const requiredText = (label: string, max?: number) => {
   let schema = z.string().trim().min(1, `${label} es obligatorio.`);
@@ -116,13 +123,13 @@ export const transitionRiskSchema = z
   });
 
 export const listRisksQuerySchema = z.object({
-  page: z.coerce.number().int().positive().default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20),
-  search: z.string().trim().optional(),
-  status: z.enum(riskStatuses).optional(),
-  categoryId: z.string().uuid().optional(),
-  unitId: z.string().uuid().optional(),
-  ownerId: z.string().uuid().optional(),
+  page: queryPageSchema,
+  pageSize: queryPageSizeSchema,
+  search: optionalQueryText(),
+  status: optionalQueryEnum(riskStatuses),
+  categoryId: optionalQueryUuid,
+  unitId: optionalQueryUuid,
+  ownerId: optionalQueryUuid,
 });
 
 export const riskIdSchema = z.string().uuid("El riesgo no es válido.");

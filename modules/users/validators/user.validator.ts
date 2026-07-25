@@ -1,4 +1,12 @@
 import { z } from "zod";
+import { securePasswordSchema } from "@/modules/auth/validators/password.validator";
+import {
+  optionalQueryEnum,
+  optionalQueryText,
+  optionalQueryUuid,
+  queryPageSchema,
+  queryPageSizeSchema,
+} from "@/modules/shared/validators/query.validator";
 
 const uniqueIds = (ids: string[]) => new Set(ids).size === ids.length;
 
@@ -29,18 +37,18 @@ const unitsSchema = z
   );
 
 export const listUsersQuerySchema = z.object({
-  page: z.coerce.number().int().positive().default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20),
-  search: z.string().trim().max(150).optional(),
-  status: z.enum(["activo", "inactivo"]).optional(),
-  roleId: z.string().uuid().optional(),
-  unitId: z.string().uuid().optional(),
+  page: queryPageSchema,
+  pageSize: queryPageSizeSchema,
+  search: optionalQueryText(150),
+  status: optionalQueryEnum(["activo", "inactivo"]),
+  roleId: optionalQueryUuid,
+  unitId: optionalQueryUuid,
 });
 
 export const createUserSchema = z.object({
   name: z.string().trim().min(1, "El nombre es obligatorio.").max(150),
   email: emailSchema,
-  password: z.string().min(1, "La contraseña es obligatoria."),
+  password: securePasswordSchema,
   roleIds: roleIdsSchema.default([]),
   units: unitsSchema.default([]),
 });
@@ -58,7 +66,7 @@ export const updateUserSchema = z
   );
 
 export const resetPasswordSchema = z.object({
-  password: z.string().min(1, "La contraseña es obligatoria."),
+  password: securePasswordSchema,
 });
 
 export const userIdSchema = z.string().uuid("El usuario no es válido.");

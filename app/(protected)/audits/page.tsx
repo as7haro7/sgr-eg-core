@@ -11,6 +11,7 @@ import {
 import { AuditService } from "@/modules/audits/services/audit.service";
 import { listAuditsQuerySchema } from "@/modules/audits/validators/audit.validator";
 import { BusinessUnitService } from "@/modules/business-units/services/business-unit.service";
+import { parsePageQuery } from "@/modules/shared/validators/query.validator";
 
 export const metadata: Metadata = {
   title: "Auditorías | SGR-EG",
@@ -43,7 +44,7 @@ export default async function AuditsPage({
 }: AuditsPageProps) {
   const principal = await getApplicationPrincipal();
   const raw = await searchParams;
-  const query = listAuditsQuerySchema.parse({
+  const query = parsePageQuery(listAuditsQuerySchema, {
     page: first(raw.page),
     pageSize: first(raw.pageSize),
     search: first(raw.search),

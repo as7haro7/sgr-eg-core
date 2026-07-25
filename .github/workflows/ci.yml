@@ -57,16 +57,9 @@ jobs:
           name: next-build
           path: .next
 
-  container:
-    runs-on: ubuntu-latest
-    needs: quality
-    steps:
-      - uses: actions/checkout@v4
-      - run: docker build -t sgr-eg:${{ github.sha }} .
-
   demo-deploy:
     runs-on: ubuntu-latest
-    needs: [quality, container]
+    needs: quality
     if: github.ref == 'refs/heads/main' && vars.DEMO_DEPLOY_ENABLED == 'true'
     steps:
       - uses: actions/checkout@v4

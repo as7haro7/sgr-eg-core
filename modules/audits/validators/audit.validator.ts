@@ -1,6 +1,13 @@
 import { z } from "zod";
 
 import { auditStatuses } from "@/modules/audits/constants/audit";
+import {
+  optionalQueryEnum,
+  optionalQueryText,
+  optionalQueryUuid,
+  queryPageSchema,
+  queryPageSizeSchema,
+} from "@/modules/shared/validators/query.validator";
 
 const dateSchema = z
   .string()
@@ -34,11 +41,11 @@ export const createAuditSchema = z
   );
 
 export const listAuditsQuerySchema = z.object({
-  page: z.coerce.number().int().positive().default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20),
-  search: z.string().trim().optional(),
-  status: z.enum(auditStatuses).optional(),
-  unitId: z.string().uuid().optional(),
+  page: queryPageSchema,
+  pageSize: queryPageSizeSchema,
+  search: optionalQueryText(),
+  status: optionalQueryEnum(auditStatuses),
+  unitId: optionalQueryUuid,
 });
 
 export const auditIdSchema = z.string().uuid("La auditoría no es válida.");

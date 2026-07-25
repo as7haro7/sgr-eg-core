@@ -6,6 +6,7 @@ import { getApplicationPrincipal } from "@/modules/auth/services/current-princip
 import { AuditLogService } from "@/modules/audit-log/services/audit-log.service";
 import { listAuditLogQuerySchema } from "@/modules/audit-log/validators/audit-log.validator";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { parsePageQuery } from "@/modules/shared/validators/query.validator";
 
 export const metadata: Metadata = {
   title: "Bitácora | SGR-EG",
@@ -26,7 +27,7 @@ export default async function AuditLogPage({ searchParams }: AuditLogPageProps) 
   const principal = await getApplicationPrincipal();
   const raw = await searchParams;
   
-  const query = listAuditLogQuerySchema.parse({
+  const query = parsePageQuery(listAuditLogQuerySchema, {
     page: first(raw.page),
     pageSize: first(raw.pageSize),
     action: first(raw.action) || undefined,
@@ -72,12 +73,17 @@ export default async function AuditLogPage({ searchParams }: AuditLogPageProps) 
             className="form-input"
           >
             <option value="">Todas las acciones</option>
-            <option value="create">Creación (Create)</option>
-            <option value="update">Modificación (Update)</option>
-            <option value="delete">Eliminación (Delete)</option>
-            <option value="login">Inicio de Sesión (Login)</option>
-            <option value="status_change">Cambio de Estado</option>
-            <option value="approve">Aprobación</option>
+            <option value="create">Creación automática</option>
+            <option value="crear">Creación funcional</option>
+            <option value="update">Modificación automática</option>
+            <option value="actualizar">Modificación funcional</option>
+            <option value="delete">Eliminación automática</option>
+            <option value="desactivar">Desactivación</option>
+            <option value="login">Inicio de sesión</option>
+            <option value="logout">Cierre de sesión</option>
+            <option value="cambiar_password">Cambio de contraseña</option>
+            <option value="reset_password">Restablecimiento de contraseña</option>
+            <option value="configurar_acceso">Configuración de acceso</option>
           </select>
           
           <select
@@ -86,11 +92,18 @@ export default async function AuditLogPage({ searchParams }: AuditLogPageProps) 
             className="form-input"
           >
             <option value="">Cualquier entidad</option>
-            <option value="riesgo">Riesgo</option>
-            <option value="control">Control</option>
-            <option value="auditoria">Auditoría</option>
-            <option value="hallazgo">Hallazgo</option>
-            <option value="usuario">Usuario</option>
+            <option value="riesgos">Riesgos</option>
+            <option value="controles">Controles</option>
+            <option value="planes_mitigacion">Planes de mitigación</option>
+            <option value="acciones_mitigacion">Acciones de mitigación</option>
+            <option value="auditorias">Auditorías</option>
+            <option value="hallazgos">Hallazgos</option>
+            <option value="normativas">Normativas</option>
+            <option value="requisitos">Requisitos</option>
+            <option value="evaluaciones_cumplimiento">Evaluaciones</option>
+            <option value="usuarios">Usuarios</option>
+            <option value="roles">Roles</option>
+            <option value="sesiones">Sesiones</option>
           </select>
           
           <button

@@ -13,6 +13,7 @@ import {
 import { RiskConfigurationService } from "@/modules/risks/services/risk-configuration.service";
 import { RiskService } from "@/modules/risks/services/risk.service";
 import { listRisksQuerySchema } from "@/modules/risks/validators/risk.validator";
+import { parsePageQuery } from "@/modules/shared/validators/query.validator";
 
 export const metadata: Metadata = {
   title: "Riesgos | SGR-EG",
@@ -35,7 +36,7 @@ export default async function RisksPage({ searchParams }: RisksPageProps) {
   const raw = await searchParams;
   const first = (value: string | string[] | undefined) =>
     Array.isArray(value) ? value[0] : value;
-  const query = listRisksQuerySchema.parse({
+  const query = parsePageQuery(listRisksQuerySchema, {
     page: first(raw.page),
     pageSize: first(raw.pageSize),
     search: first(raw.search),

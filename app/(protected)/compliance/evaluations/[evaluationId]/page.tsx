@@ -1,9 +1,11 @@
 import { ArrowLeft, BookCheck } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 import { StatusBadge } from "@/components/ui/status-badge";
 import { isEvidenceStorageConfigured } from "@/config/env";
+import { notFoundOnMissing } from "@/lib/page-error";
 import { AuthorizationService } from "@/modules/auth/services/authorization.service";
 import { getApplicationPrincipal } from "@/modules/auth/services/current-principal.service";
 import {
@@ -46,12 +48,13 @@ export default async function EvaluationDetailPage({
   params,
 }: EvaluationDetailPageProps) {
   const principal = await getApplicationPrincipal();
-  const evaluationId = evaluationIdSchema.parse(
+  const parsedEvaluationId = evaluationIdSchema.safeParse(
     (await params).evaluationId,
   );
-  const evaluation = await evaluationService.getById(
-    evaluationId,
-    principal,
+  if (!parsedEvaluationId.success) notFound();
+  const evaluationId = parsedEvaluationId.data;
+  const evaluation = await notFoundOnMissing(
+    evaluationService.getById(evaluationId, principal),
   );
   const context = {
     unitId: evaluation.unit.id,

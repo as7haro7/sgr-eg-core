@@ -1,11 +1,12 @@
 "use client";
 
-import { Ban, CheckCircle, Edit2 } from "lucide-react";
+import { Ban, Edit2 } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import type { ApiResponse } from "@/types/api-response";
 
 interface OrganizationActionsProps {
   id: string;
@@ -27,7 +28,10 @@ export function OrganizationActions({ id, type, status, currentName }: Organizat
     : `/api/risk-categories/${id}`;
 
   const handleToggleStatus = async () => {
-    if (!confirm(`¿Está seguro de que desea ${status === "activo" ? "desactivar" : "activar"} este elemento?`)) return;
+    if (
+      status !== "activo" ||
+      !confirm("¿Está seguro de que desea desactivar este elemento?")
+    ) return;
     
     setIsLoading(true);
     try {
@@ -37,8 +41,8 @@ export function OrganizationActions({ id, type, status, currentName }: Organizat
       if (res.ok) {
         router.refresh();
       } else {
-        const data = await res.json();
-        alert(data.error || "Ocurrió un error");
+        const data = (await res.json()) as ApiResponse<unknown>;
+        alert(data.message || "Ocurrió un error");
       }
     } catch {
       alert("Error de conexión");
@@ -60,8 +64,8 @@ export function OrganizationActions({ id, type, status, currentName }: Organizat
         setIsEditModalOpen(false);
         router.refresh();
       } else {
-        const data = await res.json();
-        alert(data.error || "Ocurrió un error");
+        const data = (await res.json()) as ApiResponse<unknown>;
+        alert(data.message || "Ocurrió un error");
       }
     } catch {
       alert("Error de conexión");
@@ -81,22 +85,16 @@ export function OrganizationActions({ id, type, status, currentName }: Organizat
         >
           <Edit2 className="size-4" />
         </button>
-        <button
-          onClick={handleToggleStatus}
-          disabled={isLoading}
-          title={status === "activo" ? "Desactivar" : "Activar"}
-          className={`rounded p-1.5 disabled:opacity-50 ${
-            status === "activo" 
-              ? "text-red-500 hover:bg-red-50 hover:text-red-700" 
-              : "text-emerald-500 hover:bg-emerald-50 hover:text-emerald-700"
-          }`}
-        >
-          {status === "activo" ? (
+        {status === "activo" && (
+          <button
+            onClick={handleToggleStatus}
+            disabled={isLoading}
+            title="Desactivar"
+            className="rounded p-1.5 text-red-500 hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
+          >
             <Ban className="size-4" />
-          ) : (
-            <CheckCircle className="size-4" />
-          )}
-        </button>
+          </button>
+        )}
       </div>
 
       <Dialog

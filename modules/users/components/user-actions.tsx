@@ -1,8 +1,9 @@
 "use client";
 
-import { KeyRound, Ban, CheckCircle } from "lucide-react";
+import { KeyRound, Ban } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import type { ApiResponse } from "@/types/api-response";
 
 interface UserActionsProps {
   userId: string;
@@ -14,19 +15,28 @@ export function UserActions({ userId, status }: UserActionsProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleResetPassword = async () => {
-    if (!confirm("¿Está seguro de que desea restablecer la contraseña de este usuario?")) return;
+    const password = prompt(
+      "Ingresa la nueva contraseña temporal (mínimo 12 caracteres):",
+    );
+    if (password === null) return;
+    if (password.length < 12) {
+      alert("La contraseña temporal debe tener al menos 12 caracteres.");
+      return;
+    }
     
     setIsLoading(true);
     try {
       const res = await fetch(`/api/users/${userId}/reset-password`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
       });
+      const data = (await res.json()) as ApiResponse<unknown>;
       if (res.ok) {
-        alert("Contraseña restablecida correctamente. El usuario deberá cambiarla en su próximo ingreso.");
+        alert(data.message);
         router.refresh();
       } else {
-        const data = await res.json();
-        alert(data.error || "Ocurrió un error");
+        alert(data.message || "Ocurrió un error");
       }
     } catch {
       alert("Error de conexión");
@@ -36,7 +46,10 @@ export function UserActions({ userId, status }: UserActionsProps) {
   };
 
   const handleToggleStatus = async () => {
-    if (!confirm(`¿Está seguro de que desea ${status === "activo" ? "desactivar" : "activar"} este usuario?`)) return;
+    if (
+      status !== "activo" ||
+      !confirm("¿Está seguro de que desea desactivar este usuario?")
+    ) return;
     
     setIsLoading(true);
     try {
@@ -46,8 +59,8 @@ export function UserActions({ userId, status }: UserActionsProps) {
       if (res.ok) {
         router.refresh();
       } else {
-        const data = await res.json();
-        alert(data.error || "Ocurrió un error");
+        const data = (await res.json()) as ApiResponse<unknown>;
+        alert(data.message || "Ocurrió un error");
       }
     } catch {
       alert("Error de conexión");
@@ -66,22 +79,16 @@ export function UserActions({ userId, status }: UserActionsProps) {
       >
         <KeyRound className="size-4" />
       </button>
-      <button
-        onClick={handleToggleStatus}
-        disabled={isLoading}
-        title={status === "activo" ? "Desactivar usuario" : "Activar usuario"}
-        className={`rounded p-1.5 disabled:opacity-50 ${
-          status === "activo" 
-            ? "text-red-500 hover:bg-red-50 hover:text-red-700" 
-            : "text-emerald-500 hover:bg-emerald-50 hover:text-emerald-700"
-        }`}
-      >
-        {status === "activo" ? (
+      {status === "activo" && (
+        <button
+          onClick={handleToggleStatus}
+          disabled={isLoading}
+          title="Desactivar usuario"
+          className="rounded p-1.5 text-red-500 hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
+        >
           <Ban className="size-4" />
-        ) : (
-          <CheckCircle className="size-4" />
-        )}
-      </button>
+        </button>
+      )}
     </div>
   );
 }

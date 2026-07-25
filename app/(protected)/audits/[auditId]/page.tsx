@@ -5,10 +5,12 @@ import {
 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 import { SectionTabs } from "@/components/ui/section-tabs";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { isEvidenceStorageConfigured } from "@/config/env";
+import { notFoundOnMissing } from "@/lib/page-error";
 import { AuthorizationService } from "@/modules/auth/services/authorization.service";
 import { getApplicationPrincipal } from "@/modules/auth/services/current-principal.service";
 import { AuditTransitionDialog } from "@/modules/audits/components/audit-transition-dialog";
@@ -50,7 +52,9 @@ export default async function AuditDetailPage({
   searchParams,
 }: AuditDetailPageProps) {
   const principal = await getApplicationPrincipal();
-  const auditId = auditIdSchema.parse((await params).auditId);
+  const parsedAuditId = auditIdSchema.safeParse((await params).auditId);
+  if (!parsedAuditId.success) notFound();
+  const auditId = parsedAuditId.data;
   const rawSection = (await searchParams).section;
   const requestedSection = Array.isArray(rawSection)
     ? rawSection[0]
@@ -60,7 +64,9 @@ export default async function AuditDetailPage({
   )
     ? requestedSection!
     : "summary";
-  const audit = await auditService.getById(auditId, principal);
+  const audit = await notFoundOnMissing(
+    auditService.getById(auditId, principal),
+  );
   const context = {
     unitId: audit.unit?.id,
     ownerId: audit.responsible.id,
