@@ -14,7 +14,10 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { LogoutButton } from "@/modules/auth/components/logout-button";
 import type { AuthPrincipal } from "@/modules/auth/types/auth.types";
-import type { NavigationItem } from "@/config/navigation";
+import {
+  navigationIcons,
+  type NavigationItem,
+} from "@/config/navigation";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -40,7 +43,7 @@ function Navigation({
       <ul className="space-y-1">
         {items.map((item) => {
           const active = isCurrentPath(pathname, item.href);
-          const Icon = item.icon;
+          const Icon = navigationIcons[item.icon];
 
           return (
             <li key={item.href}>

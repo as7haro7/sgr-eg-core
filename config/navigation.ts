@@ -1,4 +1,3 @@
-import type { LucideIcon } from "lucide-react";
 import {
   Building2,
   Gauge,
@@ -9,10 +8,25 @@ import {
 
 import type { AuthPrincipal } from "@/modules/auth/types/auth.types";
 
+export type NavigationIcon =
+  | "home"
+  | "risks"
+  | "users"
+  | "organization"
+  | "settings";
+
+export const navigationIcons = {
+  home: Gauge,
+  risks: ShieldAlert,
+  users: UsersRound,
+  organization: Building2,
+  settings: Settings2,
+} as const;
+
 export interface NavigationItem {
   label: string;
   href: string;
-  icon: LucideIcon;
+  icon: NavigationIcon;
   module?: string;
 }
 
@@ -20,30 +34,30 @@ export const navigationItems: readonly NavigationItem[] = [
   {
     label: "Inicio",
     href: "/",
-    icon: Gauge,
+    icon: "home",
   },
   {
     label: "Riesgos",
     href: "/risks",
-    icon: ShieldAlert,
+    icon: "risks",
     module: "riesgos",
   },
   {
     label: "Usuarios",
     href: "/users",
-    icon: UsersRound,
+    icon: "users",
     module: "usuarios",
   },
   {
     label: "Organización",
     href: "/organization",
-    icon: Building2,
+    icon: "organization",
     module: "organizacion",
   },
   {
     label: "Configuración",
     href: "/settings",
-    icon: Settings2,
+    icon: "settings",
     module: "organizacion",
   },
 ] as const;

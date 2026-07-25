@@ -2,7 +2,10 @@ import { ArrowRight, Layers3, MapPin, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
 import { StatusBadge } from "@/components/ui/status-badge";
-import { getVisibleNavigation } from "@/config/navigation";
+import {
+  getVisibleNavigation,
+  navigationIcons,
+} from "@/config/navigation";
 import { getApplicationPrincipal } from "@/modules/auth/services/current-principal.service";
 
 export default async function Home() {
@@ -91,27 +94,31 @@ export default async function Home() {
 
         {availableAreas.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {availableAreas.map(({ href, icon: Icon, label }) => (
-              <Link
-                key={href}
-                href={href}
-                className="surface-card group flex min-h-32 items-center gap-4 p-5 transition hover:border-blue-300 hover:shadow-md"
-              >
-                <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700 transition group-hover:bg-blue-700 group-hover:text-white">
-                  <Icon aria-hidden="true" className="size-5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-semibold text-slate-950">{label}</h3>
-                  <p className="mt-1 text-sm text-slate-600">
-                    Abrir área de trabajo
-                  </p>
-                </div>
-                <ArrowRight
-                  aria-hidden="true"
-                  className="size-5 shrink-0 text-slate-400 transition-transform group-hover:translate-x-1 group-hover:text-blue-700"
-                />
-              </Link>
-            ))}
+            {availableAreas.map(({ href, icon, label }) => {
+              const Icon = navigationIcons[icon];
+
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className="surface-card group flex min-h-32 items-center gap-4 p-5 transition hover:border-blue-300 hover:shadow-md"
+                >
+                  <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700 transition group-hover:bg-blue-700 group-hover:text-white">
+                    <Icon aria-hidden="true" className="size-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-semibold text-slate-950">{label}</h3>
+                    <p className="mt-1 text-sm text-slate-600">
+                      Abrir área de trabajo
+                    </p>
+                  </div>
+                  <ArrowRight
+                    aria-hidden="true"
+                    className="size-5 shrink-0 text-slate-400 transition-transform group-hover:translate-x-1 group-hover:text-blue-700"
+                  />
+                </Link>
+              );
+            })}
           </div>
         ) : (
           <div className="surface-card p-6 text-sm text-slate-600">
