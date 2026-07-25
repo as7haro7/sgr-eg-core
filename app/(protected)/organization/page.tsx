@@ -7,6 +7,7 @@ import { getApplicationPrincipal } from "@/modules/auth/services/current-princip
 import { OrganizationForms } from "@/modules/business-units/components/organization-forms";
 import { BusinessUnitService } from "@/modules/business-units/services/business-unit.service";
 import { CountryService } from "@/modules/business-units/services/country.service";
+import { OrganizationActions } from "@/modules/business-units/components/organization-actions";
 
 export const metadata: Metadata = {
   title: "Organización | SGR-EG",
@@ -74,6 +75,7 @@ export default async function OrganizationPage() {
               primary: country.name,
               secondary: country.isoCode,
               status: country.status,
+              type: "country" as const,
             }))}
           />
           <CatalogList
@@ -84,6 +86,7 @@ export default async function OrganizationPage() {
               primary: unit.name,
               secondary: `${unit.country.name} · ${unit.currency}`,
               status: unit.status,
+              type: "unit" as const,
             }))}
           />
         </div>
@@ -103,6 +106,7 @@ function CatalogList({
     primary: string;
     secondary: string;
     status: "activo" | "inactivo";
+    type: "country" | "unit";
   }>;
   title: string;
 }) {
@@ -130,9 +134,17 @@ function CatalogList({
                   {item.secondary}
                 </p>
               </div>
-              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                {item.status}
-              </span>
+              <div className="flex items-center gap-3">
+                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                  {item.status}
+                </span>
+                <OrganizationActions
+                  id={item.id}
+                  type={item.type}
+                  status={item.status}
+                  currentName={item.primary}
+                />
+              </div>
             </li>
           ))}
         </ul>

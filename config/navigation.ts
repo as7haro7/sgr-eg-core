@@ -6,6 +6,7 @@ import {
   Settings2,
   ShieldAlert,
   UsersRound,
+  Inbox,
 } from "lucide-react";
 
 import type { AuthPrincipal } from "@/modules/auth/types/auth.types";
@@ -17,7 +18,8 @@ export type NavigationIcon =
   | "risks"
   | "users"
   | "organization"
-  | "settings";
+  | "settings"
+  | "alerts";
 
 export const navigationIcons = {
   home: Gauge,
@@ -27,6 +29,7 @@ export const navigationIcons = {
   users: UsersRound,
   organization: Building2,
   settings: Settings2,
+  alerts: Inbox,
 } as const;
 
 export interface NavigationItem {
@@ -77,6 +80,12 @@ export const navigationItems: readonly NavigationItem[] = [
     href: "/settings",
     icon: "settings",
     module: "organizacion",
+  },
+  {
+    label: "Alertas",
+    href: "/alerts",
+    icon: "alerts",
+    // Siempre visible
   },
 ] as const;
 

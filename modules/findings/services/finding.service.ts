@@ -13,6 +13,7 @@ import type {
 import type {
   CreateFindingInput,
   RespondFindingInput,
+  UpdateFindingInput,
 } from "@/modules/findings/validators/finding.validator";
 
 type AuditContext = NonNullable<
@@ -102,6 +103,64 @@ export class FindingService {
     );
 
     return (await this.repository.listByAudit(auditId)).map(mapFinding);
+  }
+
+  async getById(
+    findingId: string,
+    principal: AuthPrincipal,
+  ): Promise<FindingSummary> {
+    const finding = await this.getAuthorizedFinding(
+      findingId,
+      principal,
+      "read",
+    );
+    return mapFinding(finding);
+  }
+
+  async update(
+    findingId: string,
+    input: UpdateFindingInput,
+    principal: AuthPrincipal,
+  ): Promise<FindingSummary> {
+    const finding = await this.getAuthorizedFinding(
+      findingId,
+      principal,
+      "update",
+    );
+
+    if (finding.estado === "cerrado") {
+      throw new AppError("CONFLICT", "No se puede editar un hallazgo cerrado.", 409);
+    }
+
+    if (input.responsibleId) {
+      const responsible = await this.repository.findActiveUser(input.responsibleId);
+      if (!responsible) {
+        throw new AppError("VALIDATION_ERROR", "El responsable no existe o está inactivo.", 400);
+      }
+    }
+
+    if (input.riskId) {
+      const risk = await this.repository.findRisk(input.riskId);
+      if (!risk) {
+        throw new AppError("VALIDATION_ERROR", "El riesgo relacionado no existe.", 400);
+      }
+    }
+
+    const updated = await withAuditContext(principal.userId, (tx) =>
+      new FindingRepository(tx).update(findingId, {
+        riesgo_id: input.riskId,
+        severidad: input.severity,
+        condicion: input.condition,
+        recomendacion: input.recommendation,
+        responsable_id: input.responsibleId,
+        fecha_limite: input.deadline,
+        requiere_evidencia_cierre:
+          input.severity === "critica" ? true : input.requiresClosingEvidence,
+        updated_at: new Date(),
+      }),
+    );
+
+    return mapFinding(updated);
   }
 
   async listRiskOptions(

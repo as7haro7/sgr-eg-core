@@ -21,6 +21,7 @@ import {
   findingSeverityLabels,
   findingStatusLabels,
 } from "@/modules/findings/constants/finding";
+import { FindingEditModal } from "@/modules/findings/components/finding-edit-modal";
 import type {
   FindingRiskOption,
   FindingSummary,
@@ -78,6 +79,9 @@ function formatDate(value: Date | null): string {
     timeZone: "UTC",
   }).format(new Date(value));
 }
+
+
+
 
 export function FindingPanel({
   auditId,
@@ -264,7 +268,12 @@ export function FindingPanel({
                     )}
                   </div>
                   {canUpdate && finding.status !== "cerrado" && (
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <FindingEditModal
+                        finding={finding}
+                        users={users}
+                        canUpdate={canUpdate}
+                      />
                       <Button
                         variant="secondary"
                         onClick={() => {

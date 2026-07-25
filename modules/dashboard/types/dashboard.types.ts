@@ -1,0 +1,37 @@
+export interface RiskDistribution {
+  level: string;
+  count: number;
+  percentage: number;
+}
+
+export interface ControlEffectiveness {
+  high: number;
+  medium: number;
+  low: number;
+}
+
+export interface ComplianceSummary {
+  compliant: number;
+  nonCompliant: number;
+  notApplicable: number;
+  total: number;
+  complianceRate: number;
+}
+
+export interface FindingsSummary {
+  open: number;
+  inProgress: number;
+  closed: number;
+  overdue: number;
+}
+
+export interface DashboardSummary {
+  totalRisks: number;
+  criticalRisks: number;
+  riskDistribution: RiskDistribution[];
+  heatmap: { probability: number; impact: number; count: number }[];
+  controlEffectiveness: ControlEffectiveness;
+  compliance: ComplianceSummary;
+  findings: FindingsSummary;
+  activeAlerts: number;
+}

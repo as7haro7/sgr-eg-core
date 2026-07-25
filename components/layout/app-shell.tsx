@@ -23,6 +23,7 @@ interface AppShellProps {
   children: React.ReactNode;
   navigation: NavigationItem[];
   principal: AuthPrincipal;
+  unreadAlertsCount?: number;
 }
 
 function isCurrentPath(pathname: string, href: string): boolean {
@@ -34,11 +35,13 @@ function Navigation({
   pathname,
   onNavigate,
   collapsed = false,
+  unreadAlertsCount,
 }: {
   items: NavigationItem[];
   pathname: string;
   onNavigate?: () => void;
   collapsed?: boolean;
+  unreadAlertsCount?: number;
 }) {
   return (
     <nav aria-label="Navegación principal" className="flex-1 px-3 py-5">
@@ -63,9 +66,14 @@ function Navigation({
                 )}
               >
                 <Icon aria-hidden="true" className="size-5 shrink-0" />
-                <span className={collapsed ? "sr-only" : undefined}>
+                <span className={collapsed ? "sr-only" : "flex-1"}>
                   {item.label}
                 </span>
+                {!collapsed && item.href === "/alerts" && unreadAlertsCount !== undefined && unreadAlertsCount > 0 && (
+                  <span className="flex h-5 items-center justify-center rounded-full bg-red-600 px-2 text-[10px] font-bold text-white">
+                    {unreadAlertsCount > 99 ? "+99" : unreadAlertsCount}
+                  </span>
+                )}
               </Link>
             </li>
           );
@@ -79,6 +87,7 @@ export function AppShell({
   children,
   navigation,
   principal,
+  unreadAlertsCount,
 }: AppShellProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -166,6 +175,7 @@ export function AppShell({
           items={navigation}
           pathname={pathname}
           collapsed={desktopCollapsed}
+          unreadAlertsCount={unreadAlertsCount}
         />
 
         <button
@@ -227,6 +237,7 @@ export function AppShell({
               items={navigation}
               pathname={pathname}
               onNavigate={() => setMobileOpen(false)}
+              unreadAlertsCount={unreadAlertsCount}
             />
           </aside>
         </div>

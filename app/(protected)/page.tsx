@@ -1,22 +1,36 @@
-import { ArrowRight, Layers3, MapPin, ShieldCheck } from "lucide-react";
-import Link from "next/link";
+import { ShieldCheck } from "lucide-react";
 
 import { StatusBadge } from "@/components/ui/status-badge";
-import {
-  getVisibleNavigation,
-  navigationIcons,
-} from "@/config/navigation";
 import { getApplicationPrincipal } from "@/modules/auth/services/current-principal.service";
+import { DashboardService } from "@/modules/dashboard/services/dashboard.service";
+import { DashboardKPIs } from "@/modules/dashboard/components/dashboard-kpis";
+import { DashboardCharts } from "@/modules/dashboard/components/dashboard-charts";
+import { BusinessUnitService } from "@/modules/business-units/services/business-unit.service";
 
-export default async function Home() {
+export const dynamic = "force-dynamic";
+
+const dashboardService = new DashboardService();
+const businessUnitService = new BusinessUnitService();
+
+interface HomePageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+function first(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default async function Home({ searchParams }: HomePageProps) {
   const principal = await getApplicationPrincipal();
-  const availableAreas = getVisibleNavigation(principal).filter(
-    ({ href }) => href !== "/",
-  );
-  const readableModules = new Set(
-    principal.permissions
-      .filter(({ canRead }) => canRead)
-      .map(({ module }) => module),
+  const raw = await searchParams;
+  
+  const unitId = first(raw.unitId);
+  const units = await businessUnitService.list();
+
+  // If unitId is provided but the user doesn't have access to it, DashboardService will filter it or return empty
+  const summary = await dashboardService.getSummary(
+    { unitId, periodStart: undefined, periodEnd: undefined }, 
+    principal
   );
 
   return (
@@ -25,14 +39,13 @@ export default async function Home() {
         <div className="grid gap-8 p-6 sm:p-8 lg:grid-cols-[1fr_auto] lg:items-center">
           <div>
             <StatusBadge className="bg-white/15 text-white ring-white/25">
-              Sesión protegida
+              Dashboard Principal
             </StatusBadge>
             <h1 className="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">
               Bienvenido, {principal.name}
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-blue-100 sm:text-base">
-              Accede a las funciones habilitadas para tu perfil y alcance
-              organizacional.
+              Visión general del perfil de riesgo, cumplimiento normativo y estado de auditorías.
             </p>
           </div>
           <div className="hidden size-24 items-center justify-center rounded-3xl bg-white/10 lg:flex">
@@ -41,92 +54,31 @@ export default async function Home() {
         </div>
       </section>
 
-      <section aria-labelledby="access-summary-title">
-        <div className="mb-4">
-          <p className="text-sm font-semibold text-blue-700">Resumen de acceso</p>
-          <h2
-            id="access-summary-title"
-            className="mt-1 text-xl font-bold text-slate-950"
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-slate-950">Indicadores Clave</h2>
+        <form method="get" className="flex items-center gap-3">
+          <select
+            name="unitId"
+            defaultValue={unitId ?? ""}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
-            Tu espacio de trabajo
-          </h2>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          <article className="surface-card flex items-center gap-4 p-5">
-            <div className="flex size-11 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
-              <Layers3 aria-hidden="true" className="size-5" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold tabular-nums text-slate-950">
-                {readableModules.size}
-              </p>
-              <p className="text-sm text-slate-600">Módulos autorizados</p>
-            </div>
-          </article>
-          <article className="surface-card flex items-center gap-4 p-5">
-            <div className="flex size-11 items-center justify-center rounded-xl bg-green-50 text-green-700">
-              <MapPin aria-hidden="true" className="size-5" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold tabular-nums text-slate-950">
-                {principal.unitIds.length}
-              </p>
-              <p className="text-sm text-slate-600">
-                Unidades organizacionales
-              </p>
-            </div>
-          </article>
-        </div>
-      </section>
+            <option value="">Todas mis unidades</option>
+            {units.map((unit) => (
+              <option key={unit.id} value={unit.id}>
+                {unit.name}
+              </option>
+            ))}
+          </select>
+          <button type="submit" className="rounded-lg bg-blue-700 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-800">
+            Filtrar
+          </button>
+        </form>
+      </div>
 
-      <section aria-labelledby="available-areas-title">
-        <div className="mb-4">
-          <p className="text-sm font-semibold text-blue-700">
-            Accesos habilitados
-          </p>
-          <h2
-            id="available-areas-title"
-            className="mt-1 text-xl font-bold text-slate-950"
-          >
-            Áreas disponibles
-          </h2>
-        </div>
+      <DashboardKPIs summary={summary} />
 
-        {availableAreas.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {availableAreas.map(({ href, icon, label }) => {
-              const Icon = navigationIcons[icon];
-
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  className="surface-card group flex min-h-32 items-center gap-4 p-5 transition hover:border-blue-300 hover:shadow-md"
-                >
-                  <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700 transition group-hover:bg-blue-700 group-hover:text-white">
-                    <Icon aria-hidden="true" className="size-5" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-semibold text-slate-950">{label}</h3>
-                    <p className="mt-1 text-sm text-slate-600">
-                      Abrir área de trabajo
-                    </p>
-                  </div>
-                  <ArrowRight
-                    aria-hidden="true"
-                    className="size-5 shrink-0 text-slate-400 transition-transform group-hover:translate-x-1 group-hover:text-blue-700"
-                  />
-                </Link>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="surface-card p-6 text-sm text-slate-600">
-            Tu perfil no tiene áreas funcionales de lectura asignadas. Contacta
-            a un administrador si necesitas acceso.
-          </div>
-        )}
-      </section>
+      <DashboardCharts summary={summary} />
+      
     </div>
   );
 }

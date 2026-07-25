@@ -20,7 +20,7 @@ const nullableDate = z
   .optional()
   .transform((value) => value || null);
 
-export const createFindingSchema = z
+const findingFieldsSchema = z
   .object({
     severity: z.enum(findingSeverities),
     condition: z
@@ -35,7 +35,9 @@ export const createFindingSchema = z
     responsibleId: nullableUuid("El responsable no es válido."),
     deadline: nullableDate,
     requiresClosingEvidence: z.boolean().default(true),
-  })
+  });
+
+export const createFindingSchema = findingFieldsSchema
   .superRefine(({ requiresClosingEvidence, severity }, context) => {
     if (severity === "critica" && !requiresClosingEvidence) {
       context.addIssue({
@@ -53,6 +55,13 @@ export const respondFindingSchema = z.object({
     .min(1, "La respuesta es obligatoria."),
 });
 
+export const updateFindingSchema = findingFieldsSchema
+  .partial()
+  .refine(
+    (input) => Object.values(input).some((value) => value !== undefined),
+    "Debe indicar al menos un cambio.",
+  );
+
 export const auditFindingParamsSchema = z.object({
   auditId: z.string().uuid("La auditoría no es válida."),
 });
@@ -63,4 +72,5 @@ export const findingParamsSchema = z.object({
 
 export type CreateFindingFormInput = z.input<typeof createFindingSchema>;
 export type CreateFindingInput = z.output<typeof createFindingSchema>;
+export type UpdateFindingInput = z.output<typeof updateFindingSchema>;
 export type RespondFindingInput = z.output<typeof respondFindingSchema>;

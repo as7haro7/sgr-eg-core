@@ -1,4 +1,4 @@
-import { BookCheck, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -62,34 +62,21 @@ export default async function CompliancePage({
   );
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <header className="border-b border-slate-200 p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex size-11 items-center justify-center rounded-xl bg-blue-700 text-white">
-              <BookCheck aria-hidden="true" className="size-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-slate-950">
-                Cumplimiento
-              </h1>
-              <p className="text-sm text-slate-600">
-                {evaluations.total} evaluación
-                {evaluations.total === 1 ? "" : "es"} dentro de tu alcance
-              </p>
-            </div>
-          </div>
-          {canCreate && (
-            <Link
-              href="/compliance/evaluations/new"
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-semibold text-white hover:bg-blue-800"
-            >
-              <Plus aria-hidden="true" className="size-4" />
-              Nueva evaluación
-            </Link>
-          )}
-        </div>
-      </header>
+    <div className="w-full">
+      <div className="flex items-center justify-between border-b border-slate-200 p-4">
+        <p className="text-sm font-medium text-slate-600">
+          {evaluations.total} evaluación{evaluations.total === 1 ? "" : "es"} encontrada{evaluations.total === 1 ? "" : "s"}
+        </p>
+        {canCreate && (
+          <Link
+            href="/compliance/evaluations/new"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-semibold text-white hover:bg-blue-800"
+          >
+            <Plus aria-hidden="true" className="size-4" />
+            Nueva evaluación
+          </Link>
+        )}
+      </div>
 
       <form
         className="grid gap-3 border-b border-slate-200 p-4 sm:grid-cols-2 lg:grid-cols-4"
@@ -214,6 +201,6 @@ export default async function CompliancePage({
           No se encontraron evaluaciones para los filtros seleccionados.
         </p>
       )}
-    </section>
+    </div>
   );
 }

@@ -9,6 +9,8 @@ import { RiskConfigurationForms } from "@/modules/risks/components/risk-configur
 import { RiskConfigurationService } from "@/modules/risks/services/risk-configuration.service";
 import { SystemParameterEditor } from "@/modules/shared/components/system-parameter-editor";
 import { SystemParameterService } from "@/modules/shared/services/system-parameter.service";
+import { OrganizationActions } from "@/modules/business-units/components/organization-actions";
+import { AlertEngineButton } from "@/modules/alerts/components/alert-engine-button";
 
 export const metadata: Metadata = {
   title: "Configuración | SGR-EG",
@@ -29,6 +31,8 @@ const settingsTabs = [
   { id: "categories", label: "Categorías" },
   { id: "appetites", label: "Apetitos" },
   { id: "parameters", label: "Parámetros" },
+  { id: "system", label: "Sistema" },
+  { id: "audit-log", label: "Bitácora" },
 ] as const;
 
 export default async function SettingsPage({
@@ -111,11 +115,11 @@ export default async function SettingsPage({
           </div>
         </nav>
 
-        {canCreate && (
+        {canCreate && ["categories", "appetites", "parameters"].includes(activeTab) && (
           <RiskConfigurationForms
             categories={categories}
             units={units}
-            section={activeTab}
+            section={activeTab as "categories" | "appetites" | "parameters"}
           />
         )}
 
@@ -141,7 +145,15 @@ export default async function SettingsPage({
                         : ""}
                     </p>
                   </div>
-                  <StatusBadge status={category.status} />
+                  <div className="flex items-center gap-3">
+                    <StatusBadge status={category.status} />
+                    <OrganizationActions
+                      id={category.id}
+                      type="category"
+                      status={category.status}
+                      currentName={category.name}
+                    />
+                  </div>
                 </li>
               ))}
             </ul>
@@ -211,6 +223,45 @@ export default async function SettingsPage({
             )}
           </div>
         </section>
+        )}
+
+        {activeTab === "system" && (
+          <section className="p-6">
+            <h2 className="text-lg font-bold text-slate-950 dark:text-white">
+              Sistema y Alertas
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Controles manuales para tareas programadas y procesos en segundo plano.
+            </p>
+            <div className="mt-6">
+              {canCreate ? (
+                <AlertEngineButton />
+              ) : (
+                <EmptyState message="No tienes permisos para ejecutar procesos del sistema." />
+              )}
+            </div>
+          </section>
+        )}
+
+        {activeTab === "audit-log" && (
+          <section className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-slate-950 dark:text-white">
+                  Bitácora de Auditoría
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Consulta el registro de actividades del sistema.
+                </p>
+              </div>
+              <Link 
+                href="/settings/audit-log" 
+                className="inline-flex h-9 items-center justify-center rounded-lg bg-blue-700 px-4 text-sm font-semibold text-white hover:bg-blue-800"
+              >
+                Abrir Bitácora
+              </Link>
+            </div>
+          </section>
         )}
       </section>
     </div>

@@ -7,6 +7,7 @@ import { getApplicationPrincipal } from "@/modules/auth/services/current-princip
 import { BusinessUnitService } from "@/modules/business-units/services/business-unit.service";
 import { RoleService } from "@/modules/roles/services/role.service";
 import { CreateUserDialog } from "@/modules/users/components/create-user-dialog";
+import { UserActions } from "@/modules/users/components/user-actions";
 import { UserService } from "@/modules/users/services/user.service";
 import { listUsersQuerySchema } from "@/modules/users/validators/user.validator";
 
@@ -114,6 +115,9 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
                 <th className="px-6 py-3" scope="col">
                   Último acceso
                 </th>
+                <th className="px-6 py-3 text-right" scope="col">
+                  Acciones
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
@@ -146,6 +150,9 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
                           timeZone: "America/La_Paz",
                         }).format(user.lastLogin)
                       : "Sin acceso"}
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <UserActions userId={user.id} status={user.status} />
                   </td>
                 </tr>
               ))}
