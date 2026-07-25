@@ -12,12 +12,15 @@ import {
 } from "@/modules/risks/repositories/risk.repository";
 import type {
   PaginatedRisks,
+  RiskCalculationPreview,
+  RiskCriticality,
   RiskOwnerOption,
   RiskSummary,
 } from "@/modules/risks/types/risk.types";
 import type {
   CreateRiskInput,
   ListRisksQuery,
+  PreviewRiskInput,
   TransitionRiskInput,
   UpdateRiskInput,
 } from "@/modules/risks/validators/risk.validator";
@@ -82,6 +85,17 @@ function mapRisk(record: RiskSummaryRecord): RiskSummary {
 
 function riskNotFound(): AppError {
   return new AppError("NOT_FOUND", "El riesgo no existe.", 404);
+}
+
+function getCriticality(level: number): RiskCriticality {
+  if (level <= 4) return "low";
+  if (level <= 9) return "moderate";
+  if (level <= 16) return "high";
+  return "critical";
+}
+
+function roundToTwoDecimals(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
 function hasAction(permission: AuthPermission, action: "read" | "create" | "update") {
@@ -180,6 +194,113 @@ export class RiskService {
     const transitions = await this.repository.listTransitions(risk.estado);
 
     return transitions.map(({ destino }) => destino);
+  }
+
+  async previewCalculation(
+    input: PreviewRiskInput,
+    principal: AuthPrincipal,
+  ): Promise<RiskCalculationPreview> {
+    let existingRisk: RiskRecord | null = null;
+
+    if (input.riskId) {
+      existingRisk = await this.getAuthorizedRisk(
+        input.riskId,
+        principal,
+        "update",
+      );
+      this.authorization.assertAllowed(
+        principal,
+        "riesgos",
+        "update",
+        {
+          unitId: input.unitId,
+          ownerId: existingRisk.creado_por,
+          assigneeIds: existingRisk.propietario_id
+            ? [existingRisk.propietario_id]
+            : [],
+        },
+      );
+    } else {
+      this.authorization.assertAllowed(
+        principal,
+        "riesgos",
+        "create",
+        {
+          unitId: input.unitId,
+          ownerId: principal.userId,
+          assigneeIds: [],
+        },
+      );
+    }
+
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    const [category, unit, unitAppetite, globalAppetite, controls] =
+      await Promise.all([
+        this.repository.findCategoryForCalculation(input.categoryId),
+        this.repository.findActiveUnit(input.unitId),
+        this.repository.findEffectiveUnitAppetite(
+          input.categoryId,
+          input.unitId,
+          today,
+        ),
+        this.repository.findEffectiveGlobalAppetite(
+          input.categoryId,
+          today,
+        ),
+        input.riskId
+          ? this.repository.listActiveControlEffectiveness(input.riskId)
+          : Promise.resolve([]),
+      ]);
+
+    if (!category) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "La categoría no existe o está inactiva.",
+        400,
+      );
+    }
+
+    if (!unit) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "La unidad de negocio no existe o está inactiva.",
+        400,
+      );
+    }
+
+    const inherentLevel = input.probability * input.impact;
+    const residualFactor = controls.reduce(
+      (factor, control) =>
+        factor * (1 - control.efectividad.toNumber() / 100),
+      1,
+    );
+    const residualLevel = roundToTwoDecimals(
+      inherentLevel * residualFactor,
+    );
+    const accumulatedEffectiveness = roundToTwoDecimals(
+      (1 - residualFactor) * 100,
+    );
+    const appetiteThreshold =
+      unitAppetite?.umbral.toNumber() ??
+      globalAppetite?.umbral.toNumber() ??
+      category.apetito_base.toNumber();
+    const appetiteSource = unitAppetite
+      ? "unit"
+      : globalAppetite
+        ? "global"
+        : "category";
+
+    return {
+      inherentLevel,
+      residualLevel,
+      accumulatedEffectiveness,
+      appetiteThreshold,
+      appetiteSource,
+      inherentCriticality: getCriticality(inherentLevel),
+      residualCriticality: getCriticality(residualLevel),
+      exceedsAppetite: residualLevel > appetiteThreshold,
+    };
   }
 
   async create(

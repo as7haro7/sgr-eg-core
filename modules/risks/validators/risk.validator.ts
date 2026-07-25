@@ -127,9 +127,18 @@ export const listRisksQuerySchema = z.object({
 
 export const riskIdSchema = z.string().uuid("El riesgo no es válido.");
 
+export const previewRiskSchema = z.object({
+  categoryId: z.string().uuid("La categoría no es válida."),
+  unitId: z.string().uuid("La unidad de negocio no es válida."),
+  probability: z.coerce.number<number>().int().min(1).max(5),
+  impact: z.coerce.number<number>().int().min(1).max(5),
+  riskId: riskIdSchema.optional(),
+});
+
 export type CreateRiskFormInput = z.input<typeof createRiskSchema>;
 export type CreateRiskInput = z.output<typeof createRiskSchema>;
 export type UpdateRiskInput = z.output<typeof updateRiskSchema>;
+export type PreviewRiskInput = z.output<typeof previewRiskSchema>;
 export type TransitionRiskFormInput = z.input<typeof transitionRiskSchema>;
 export type TransitionRiskInput = z.output<typeof transitionRiskSchema>;
 export type ListRisksQuery = z.output<typeof listRisksQuerySchema>;

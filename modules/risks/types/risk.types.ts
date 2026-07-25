@@ -47,3 +47,17 @@ export interface RiskOwnerOption {
   name: string;
   unitIds: string[];
 }
+
+export type RiskCriticality = "low" | "moderate" | "high" | "critical";
+export type RiskAppetiteSource = "unit" | "global" | "category";
+
+export interface RiskCalculationPreview {
+  inherentLevel: number;
+  residualLevel: number;
+  accumulatedEffectiveness: number;
+  appetiteThreshold: number;
+  appetiteSource: RiskAppetiteSource;
+  inherentCriticality: RiskCriticality;
+  residualCriticality: RiskCriticality;
+  exceedsAppetite: boolean;
+}

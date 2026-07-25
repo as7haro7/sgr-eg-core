@@ -5,7 +5,9 @@ import type { ListRisksQuery } from "@/modules/risks/validators/risk.validator";
 
 type RiskDatabaseClient = Pick<
   TransactionClient,
+  | "apetitos_riesgo"
   | "categorias_riesgo"
+  | "controles"
   | "riesgos"
   | "transiciones_riesgo"
   | "unidades_negocio"
@@ -124,6 +126,60 @@ export class RiskRepository {
     return this.database.categorias_riesgo.findFirst({
       where: { id: categoryId, estado: "activo" },
       select: { id: true },
+    });
+  }
+
+  findCategoryForCalculation(categoryId: string) {
+    return this.database.categorias_riesgo.findFirst({
+      where: { id: categoryId, estado: "activo" },
+      select: { id: true, apetito_base: true },
+    });
+  }
+
+  findEffectiveUnitAppetite(
+    categoryId: string,
+    unitId: string,
+    date: Date,
+  ) {
+    return this.database.apetitos_riesgo.findFirst({
+      where: {
+        categoria_id: categoryId,
+        unidad_id: unitId,
+        vigente_desde: { lte: date },
+        OR: [
+          { vigente_hasta: null },
+          { vigente_hasta: { gte: date } },
+        ],
+      },
+      select: { umbral: true },
+      orderBy: { vigente_desde: "desc" },
+    });
+  }
+
+  findEffectiveGlobalAppetite(categoryId: string, date: Date) {
+    return this.database.apetitos_riesgo.findFirst({
+      where: {
+        categoria_id: categoryId,
+        unidad_id: null,
+        vigente_desde: { lte: date },
+        OR: [
+          { vigente_hasta: null },
+          { vigente_hasta: { gte: date } },
+        ],
+      },
+      select: { umbral: true },
+      orderBy: { vigente_desde: "desc" },
+    });
+  }
+
+  listActiveControlEffectiveness(riskId: string) {
+    return this.database.controles.findMany({
+      where: {
+        riesgo_id: riskId,
+        estado: "activo",
+        deleted_at: null,
+      },
+      select: { efectividad: true },
     });
   }
 
