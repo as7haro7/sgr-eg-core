@@ -7,8 +7,17 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "node scripts/e2e-smoke.mjs",
+    "db:check": "node --env-file-if-exists=.env --experimental-strip-types scripts/check-database.ts",
+    "db:migrate": "prisma migrate deploy",
+    "db:seed": "node --env-file-if-exists=.env --experimental-strip-types scripts/seed.ts",
+    "db:backup": "node --env-file-if-exists=.env --experimental-strip-types scripts/backup-database.ts",
+    "db:restore": "node --env-file-if-exists=.env --experimental-strip-types scripts/restore-database.ts",
     "postinstall": "prisma generate",
-    "bootstrap:admin": "node --env-file=.env --experimental-strip-types scripts/bootstrap-admin.ts"
+    "bootstrap:admin": "node --env-file-if-exists=.env --experimental-strip-types scripts/bootstrap-admin.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
@@ -18,7 +27,8 @@
     "clsx": "^2.1.1",
     "lucide-react": "^1.26.0",
     "next": "15.5.21",
-    "prisma": "^7.9.0",
+    "nodemailer": "^9.0.3",
+    "pg": "^8.22.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-hook-form": "^7.82.0",
@@ -30,11 +40,22 @@
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/nodemailer": "^8.0.1",
+    "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "^4.1.10",
     "eslint": "^9",
     "eslint-config-next": "15.5.21",
+    "prisma": "^7.9.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.10"
+  },
+  "overrides": {
+    "find-my-way": "9.7.0",
+    "postcss": "8.5.23",
+    "sharp": "0.35.3",
+    "valibot": "1.4.2"
   }
 }

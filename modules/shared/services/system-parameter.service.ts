@@ -31,9 +31,15 @@ function toPrismaJson(
 }
 
 const knownParameterSchemas: Record<string, z.ZodType> = {
-  evidencia_max_bytes: z.number().int().positive(),
-  alerta_dias_vencimiento: z.number().int().nonnegative(),
-  sesion_minutos: z.number().int().positive(),
+  evidencia_max_bytes: z.number().int().min(1).max(50 * 1024 * 1024),
+  alerta_dias_vencimiento: z.number().int().min(0).max(365),
+  sesion_minutos: z.number().int().min(5).max(1_440),
+  criticidad_rangos: z.object({
+    bajo: z.tuple([z.number().min(1), z.number().max(25)]),
+    moderado: z.tuple([z.number().min(1), z.number().max(25)]),
+    alto: z.tuple([z.number().min(1), z.number().max(25)]),
+    critico: z.tuple([z.number().min(1), z.number().max(25)]),
+  }),
 };
 
 function assertValidParameterValue(key: string, value: unknown): void {

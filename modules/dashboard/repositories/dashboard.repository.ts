@@ -2,33 +2,47 @@ import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { TransactionClient } from "@/lib/transaction";
 import type { DashboardFilter } from "@/modules/dashboard/validators/dashboard.validator";
+import {
+  classifyRiskLevel,
+  parseCriticalityRanges,
+} from "@/modules/risks/constants/criticality";
 
 type DashboardDatabaseClient = Pick<
   TransactionClient,
-  | "riesgos"
+  | "alertas"
   | "controles"
   | "evaluaciones_cumplimiento"
   | "hallazgos"
-  | "alertas"
+  | "parametros_sistema"
+  | "riesgos"
 >;
 
 export class DashboardRepository {
   constructor(private readonly database: DashboardDatabaseClient = prisma) {}
 
-  private buildUnitWhere(filter: DashboardFilter) {
-    if (filter.unitId) return { unidad_id: filter.unitId };
-    if (filter.countryId) return { unidades_negocio: { pais_id: filter.countryId } };
-    return {};
+  private buildUnitWhere(
+    filter: DashboardFilter,
+    unitIdsScope?: string[],
+  ): Prisma.unidades_negocioWhereInput {
+    return {
+      AND: [
+        filter.unitId ? { id: filter.unitId } : {},
+        filter.countryId ? { pais_id: filter.countryId } : {},
+        unitIdsScope ? { id: { in: unitIdsScope } } : {},
+      ],
+    };
   }
 
-  async getRiskMetrics(filter: DashboardFilter, unitIdsScope: string[]) {
-    const scopeWhere = unitIdsScope.length > 0 ? { unidad_id: { in: unitIdsScope } } : {};
-    
-    const where: Prisma.riesgosWhereInput = {
+  private buildRiskWhere(
+    filter: DashboardFilter,
+    unitIdsScope?: string[],
+  ): Prisma.riesgosWhereInput {
+    return {
       deleted_at: null,
-      estado: { not: "cerrado" },
-      ...this.buildUnitWhere(filter),
-      ...scopeWhere,
+      categoria_id: filter.categoryId,
+      propietario_id: filter.ownerId,
+      estado: filter.status,
+      unidades_negocio: this.buildUnitWhere(filter, unitIdsScope),
       ...(filter.periodStart || filter.periodEnd
         ? {
             created_at: {
@@ -38,54 +52,60 @@ export class DashboardRepository {
           }
         : {}),
     };
+  }
 
-    const risks = await this.database.riesgos.findMany({
-      where,
-      select: { nivel_residual: true, probabilidad: true, impacto: true },
-    });
-
+  async getRiskMetrics(
+    filter: DashboardFilter,
+    unitIdsScope?: string[],
+  ) {
+    const [risks, rangeParameter] = await Promise.all([
+      this.database.riesgos.findMany({
+        where: this.buildRiskWhere(filter, unitIdsScope),
+        select: {
+          nivel_residual: true,
+          probabilidad: true,
+          impacto: true,
+        },
+      }),
+      this.database.parametros_sistema.findUnique({
+        where: { clave: "criticidad_rangos" },
+        select: { valor: true },
+      }),
+    ]);
+    const ranges = parseCriticalityRanges(rangeParameter?.valor);
     const totalRisks = risks.length;
-    let criticalRisks = 0;
     const distribution = {
-      bajo: 0,
-      medio: 0,
-      alto: 0,
-      critico: 0,
+      low: 0,
+      moderate: 0,
+      high: 0,
+      critical: 0,
     };
 
     for (const risk of risks) {
-      const value = risk.nivel_residual.toNumber();
-      if (value < 5) distribution.bajo++;
-      else if (value < 10) distribution.medio++;
-      else if (value < 15) distribution.alto++;
-      else {
-        distribution.critico++;
-        criticalRisks++;
-      }
+      distribution[
+        classifyRiskLevel(risk.nivel_residual.toNumber(), ranges)
+      ]++;
     }
 
     const riskDistribution = [
-      { level: "Bajo", count: distribution.bajo, percentage: totalRisks ? (distribution.bajo / totalRisks) * 100 : 0 },
-      { level: "Medio", count: distribution.medio, percentage: totalRisks ? (distribution.medio / totalRisks) * 100 : 0 },
-      { level: "Alto", count: distribution.alto, percentage: totalRisks ? (distribution.alto / totalRisks) * 100 : 0 },
-      { level: "Crítico", count: distribution.critico, percentage: totalRisks ? (distribution.critico / totalRisks) * 100 : 0 },
-    ];
+      { level: "Bajo", count: distribution.low },
+      { level: "Moderado", count: distribution.moderate },
+      { level: "Alto", count: distribution.high },
+      { level: "Crítico", count: distribution.critical },
+    ].map((item) => ({
+      ...item,
+      percentage: totalRisks ? (item.count / totalRisks) * 100 : 0,
+    }));
 
-    // Initialize 5x5 heatmap with 0 counts
     const heatmapMap = new Map<string, number>();
-    for (let p = 1; p <= 5; p++) {
-      for (let i = 1; i <= 5; i++) {
-        heatmapMap.set(`${p}-${i}`, 0);
+    for (let probability = 1; probability <= 5; probability++) {
+      for (let impact = 1; impact <= 5; impact++) {
+        heatmapMap.set(`${probability}-${impact}`, 0);
       }
     }
-
     for (const risk of risks) {
-      if (risk.probabilidad && risk.impacto) {
-        const key = `${risk.probabilidad}-${risk.impacto}`;
-        if (heatmapMap.has(key)) {
-          heatmapMap.set(key, heatmapMap.get(key)! + 1);
-        }
-      }
+      const key = `${risk.probabilidad}-${risk.impacto}`;
+      heatmapMap.set(key, (heatmapMap.get(key) ?? 0) + 1);
     }
 
     const heatmap = Array.from(heatmapMap.entries()).map(([key, count]) => {
@@ -93,109 +113,107 @@ export class DashboardRepository {
       return { probability, impact, count };
     });
 
-    return { totalRisks, criticalRisks, riskDistribution, heatmap };
+    return {
+      totalRisks,
+      criticalRisks: distribution.critical,
+      riskDistribution,
+      heatmap,
+    };
   }
 
-  async getControlMetrics(filter: DashboardFilter, unitIdsScope: string[]) {
-    const scopeWhere = unitIdsScope.length > 0 ? { riesgos: { unidad_id: { in: unitIdsScope } } } : {};
-    
-    const where: Prisma.controlesWhereInput = {
-      deleted_at: null,
-      estado: "activo",
-      ...(filter.unitId || filter.countryId
-        ? { riesgos: this.buildUnitWhere(filter) }
-        : {}),
-      ...scopeWhere,
-    };
-
+  async getControlMetrics(
+    filter: DashboardFilter,
+    unitIdsScope?: string[],
+  ) {
     const controls = await this.database.controles.findMany({
-      where,
+      where: {
+        deleted_at: null,
+        estado: "activo",
+        riesgos: this.buildRiskWhere(filter, unitIdsScope),
+      },
       select: { efectividad: true },
     });
-
     const effectiveness = { high: 0, medium: 0, low: 0 };
     for (const control of controls) {
-      const val = control.efectividad.toNumber();
-      if (val >= 80) effectiveness.high++;
-      else if (val >= 50) effectiveness.medium++;
+      const value = control.efectividad.toNumber();
+      if (value >= 80) effectiveness.high++;
+      else if (value >= 50) effectiveness.medium++;
       else effectiveness.low++;
     }
-
     return effectiveness;
   }
 
-  async getComplianceMetrics(filter: DashboardFilter, unitIdsScope: string[]) {
-    const scopeWhere = unitIdsScope.length > 0 ? { unidad_id: { in: unitIdsScope } } : {};
-    
-    const where: Prisma.evaluaciones_cumplimientoWhereInput = {
-      deleted_at: null,
-      ...this.buildUnitWhere(filter),
-      ...scopeWhere,
-      ...(filter.periodStart || filter.periodEnd
-        ? {
-            periodo_fin: {
-              gte: filter.periodStart,
-              lte: filter.periodEnd,
-            },
-          }
-        : {}),
+  async getComplianceMetrics(
+    filter: DashboardFilter,
+    unitIdsScope?: string[],
+  ) {
+    const evaluations =
+      await this.database.evaluaciones_cumplimiento.groupBy({
+        by: ["resultado"],
+        where: {
+          deleted_at: null,
+          unidades_negocio: this.buildUnitWhere(filter, unitIdsScope),
+          ...(filter.periodStart || filter.periodEnd
+            ? {
+                periodo_inicio: { lte: filter.periodEnd },
+                periodo_fin: { gte: filter.periodStart },
+              }
+            : {}),
+        },
+        _count: true,
+      });
+    const metrics = {
+      compliant: 0,
+      nonCompliant: 0,
+      notApplicable: 0,
+      total: 0,
     };
-
-    const evaluations = await this.database.evaluaciones_cumplimiento.groupBy({
-      by: ["resultado"],
-      where,
-      _count: true,
-    });
-
-    const metrics = { compliant: 0, nonCompliant: 0, notApplicable: 0, total: 0 };
-    
-    for (const ev of evaluations) {
-      if (ev.resultado === "conforme") metrics.compliant = ev._count;
-      else if (ev.resultado === "no_conforme") metrics.nonCompliant = ev._count;
-      else if (ev.resultado === "no_aplicable") metrics.notApplicable = ev._count;
-      metrics.total += ev._count;
+    for (const evaluation of evaluations) {
+      if (evaluation.resultado === "conforme") {
+        metrics.compliant = evaluation._count;
+      } else if (evaluation.resultado === "no_conforme") {
+        metrics.nonCompliant = evaluation._count;
+      } else if (evaluation.resultado === "no_aplicable") {
+        metrics.notApplicable = evaluation._count;
+      }
+      metrics.total += evaluation._count;
     }
-    
-    const complianceRate =
-      metrics.total - metrics.notApplicable > 0
-        ? (metrics.compliant / (metrics.total - metrics.notApplicable)) * 100
-        : 100;
-
-    return { ...metrics, complianceRate };
+    const applicable = metrics.total - metrics.notApplicable;
+    return {
+      ...metrics,
+      complianceRate:
+        applicable > 0 ? (metrics.compliant / applicable) * 100 : 100,
+    };
   }
 
-  async getFindingsMetrics(filter: DashboardFilter, unitIdsScope: string[]) {
-    const scopeWhere = unitIdsScope.length > 0 ? { auditorias: { unidad_id: { in: unitIdsScope } } } : {};
-    
-    const where: Prisma.hallazgosWhereInput = {
-      deleted_at: null,
-      ...(filter.unitId || filter.countryId
-        ? { auditorias: this.buildUnitWhere(filter) }
-        : {}),
-      ...scopeWhere,
-      ...(filter.periodStart || filter.periodEnd
-        ? {
-            created_at: {
-              gte: filter.periodStart,
-              lte: filter.periodEnd,
-            },
-          }
-        : {}),
-    };
-
+  async getFindingsMetrics(
+    filter: DashboardFilter,
+    unitIdsScope?: string[],
+  ) {
     const findings = await this.database.hallazgos.findMany({
-      where,
+      where: {
+        deleted_at: null,
+        responsable_id: filter.ownerId,
+        auditorias: {
+          unidades_negocio: this.buildUnitWhere(filter, unitIdsScope),
+        },
+        ...(filter.periodStart || filter.periodEnd
+          ? {
+              created_at: {
+                gte: filter.periodStart,
+                lte: filter.periodEnd,
+              },
+            }
+          : {}),
+      },
       select: { estado: true, fecha_limite: true },
     });
-
     const metrics = { open: 0, inProgress: 0, closed: 0, overdue: 0 };
     const now = new Date();
-
     for (const finding of findings) {
       if (finding.estado === "abierto") metrics.open++;
       else if (finding.estado === "en_seguimiento") metrics.inProgress++;
-      else if (finding.estado === "cerrado") metrics.closed++;
-
+      else metrics.closed++;
       if (
         finding.estado !== "cerrado" &&
         finding.fecha_limite &&
@@ -204,11 +222,10 @@ export class DashboardRepository {
         metrics.overdue++;
       }
     }
-
     return metrics;
   }
 
-  async getAlertsCount(userId: string) {
+  getAlertsCount(userId: string) {
     return this.database.alertas.count({
       where: {
         destinatario_id: userId,

@@ -40,7 +40,7 @@ export function OrganizationActions({ id, type, status, currentName }: Organizat
         const data = await res.json();
         alert(data.error || "Ocurrió un error");
       }
-    } catch (e) {
+    } catch {
       alert("Error de conexión");
     } finally {
       setIsLoading(false);
@@ -63,7 +63,7 @@ export function OrganizationActions({ id, type, status, currentName }: Organizat
         const data = await res.json();
         alert(data.error || "Ocurrió un error");
       }
-    } catch (e) {
+    } catch {
       alert("Error de conexión");
     } finally {
       setIsLoading(false);

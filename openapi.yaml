@@ -1,0 +1,657 @@
+openapi: 3.1.0
+info:
+  title: SGR-EG REST API
+  version: 1.0.0
+  description: Contrato de la API del Sistema de Gestión de Riesgos Empresariales Globales.
+servers:
+  - url: /api
+security:
+  - sessionCookie: []
+tags:
+  - { name: Autenticación }
+  - { name: Usuarios }
+  - { name: Configuración }
+  - { name: Riesgos }
+  - { name: Controles }
+  - { name: Mitigación }
+  - { name: Auditorías }
+  - { name: Cumplimiento }
+  - { name: Alertas }
+  - { name: Evidencias }
+  - { name: Reportes }
+paths:
+  /auth/login:
+    post:
+      security: []
+      tags: [Autenticación]
+      summary: Iniciar sesión
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [correo, password]
+              properties:
+                correo: { type: string, format: email }
+                password: { type: string, format: password }
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+  /auth/logout:
+    post:
+      tags: [Autenticación]
+      summary: Revocar la sesión actual
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+  /auth/change-password:
+    post:
+      tags: [Autenticación]
+      summary: Cambiar contraseña propia
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+  /auth/session:
+    get:
+      tags: [Autenticación]
+      summary: Validar la sesión y obtener el principal
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+        "401": { $ref: "#/components/responses/Error" }
+  /users:
+    get:
+      tags: [Usuarios]
+      summary: Listar usuarios
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+    post:
+      tags: [Usuarios]
+      summary: Crear usuario
+      responses:
+        "201": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+  /users/{userId}:
+    patch:
+      tags: [Usuarios]
+      summary: Actualizar usuario, roles y unidades
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+        "403": { $ref: "#/components/responses/Error" }
+  /users/{userId}/deactivate:
+    post:
+      tags: [Usuarios]
+      summary: Desactivar usuario sin eliminación física
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+  /users/{userId}/reset-password:
+    post:
+      tags: [Usuarios]
+      summary: Restablecer contraseña y exigir cambio posterior
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+  /roles:
+    get:
+      tags: [Usuarios]
+      summary: Listar roles activos y sus permisos
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+    post:
+      tags: [Usuarios]
+      summary: Crear rol y matriz de permisos
+      responses:
+        "201": { $ref: "#/components/responses/Success" }
+  /roles/{roleId}:
+    patch:
+      tags: [Usuarios]
+      summary: Actualizar rol y permisos
+      parameters:
+        - $ref: "#/components/parameters/RoleId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+  /roles/{roleId}/deactivate:
+    post:
+      tags: [Usuarios]
+      summary: Desactivar rol
+      parameters:
+        - $ref: "#/components/parameters/RoleId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+  /countries:
+    get:
+      tags: [Configuración]
+      summary: Listar países
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+    post:
+      tags: [Configuración]
+      summary: Crear país
+      responses:
+        "201": { $ref: "#/components/responses/Success" }
+  /countries/{countryId}:
+    patch:
+      tags: [Configuración]
+      summary: Actualizar país
+      parameters:
+        - $ref: "#/components/parameters/CountryId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+  /countries/{countryId}/deactivate:
+    post:
+      tags: [Configuración]
+      summary: Desactivar país
+      parameters:
+        - $ref: "#/components/parameters/CountryId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+  /business-units:
+    get:
+      tags: [Configuración]
+      summary: Listar unidades de negocio
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+    post:
+      tags: [Configuración]
+      summary: Crear unidad de negocio
+      responses:
+        "201": { $ref: "#/components/responses/Success" }
+  /business-units/{unitId}:
+    patch:
+      tags: [Configuración]
+      summary: Actualizar unidad de negocio
+      parameters:
+        - $ref: "#/components/parameters/UnitId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+  /business-units/{unitId}/deactivate:
+    post:
+      tags: [Configuración]
+      summary: Desactivar unidad de negocio
+      parameters:
+        - $ref: "#/components/parameters/UnitId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+  /risk-categories:
+    get:
+      tags: [Configuración]
+      summary: Listar categorías de riesgo
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+    post:
+      tags: [Configuración]
+      summary: Crear categoría de riesgo
+      responses:
+        "201": { $ref: "#/components/responses/Success" }
+  /risk-categories/{categoryId}:
+    patch:
+      tags: [Configuración]
+      summary: Actualizar categoría de riesgo
+      parameters:
+        - $ref: "#/components/parameters/CategoryId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+  /risk-categories/{categoryId}/deactivate:
+    post:
+      tags: [Configuración]
+      summary: Desactivar categoría de riesgo
+      parameters:
+        - $ref: "#/components/parameters/CategoryId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+  /risk-appetites:
+    get:
+      tags: [Configuración]
+      summary: Consultar historial de apetitos
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+    post:
+      tags: [Configuración]
+      summary: Configurar apetito con unidad y vigencia opcionales
+      responses:
+        "201": { $ref: "#/components/responses/Success" }
+  /system-parameters:
+    get:
+      tags: [Configuración]
+      summary: Listar parámetros tipados
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+    post:
+      tags: [Configuración]
+      summary: Crear parámetro tipado
+      responses:
+        "201": { $ref: "#/components/responses/Success" }
+  /system-parameters/{key}:
+    patch:
+      tags: [Configuración]
+      summary: Actualizar parámetro tipado
+      parameters:
+        - { in: path, name: key, required: true, schema: { type: string } }
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+  /risks:
+    get:
+      tags: [Riesgos]
+      summary: Consultar riesgos con alcance y filtros
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+    post:
+      tags: [Riesgos]
+      summary: Registrar riesgo
+      responses:
+        "201": { $ref: "#/components/responses/Success" }
+  /risks/preview:
+    post:
+      tags: [Riesgos]
+      summary: Calcular inherente, residual, criticidad y apetito en backend
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+  /risks/{riskId}:
+    get:
+      tags: [Riesgos]
+      summary: Consultar riesgo
+      parameters:
+        - $ref: "#/components/parameters/RiskId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+    patch:
+      tags: [Riesgos]
+      summary: Editar riesgo
+      parameters:
+        - $ref: "#/components/parameters/RiskId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+  /risks/{riskId}/transition:
+    post:
+      tags: [Riesgos]
+      summary: Ejecutar transición de estado válida
+      parameters:
+        - $ref: "#/components/parameters/RiskId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+  /risks/{riskId}/controls:
+    get:
+      tags: [Riesgos]
+      summary: Listar controles y residual
+      parameters:
+        - $ref: "#/components/parameters/RiskId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+    post:
+      tags: [Riesgos]
+      summary: Crear control
+      parameters:
+        - $ref: "#/components/parameters/RiskId"
+      responses:
+        "201": { $ref: "#/components/responses/Success" }
+  /risks/{riskId}/mitigation-plans:
+    get:
+      tags: [Riesgos]
+      summary: Listar planes y acciones
+      parameters:
+        - $ref: "#/components/parameters/RiskId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+    post:
+      tags: [Riesgos]
+      summary: Crear plan de mitigación
+      parameters:
+        - $ref: "#/components/parameters/RiskId"
+      responses:
+        "201": { $ref: "#/components/responses/Success" }
+  /controls/{controlId}:
+    patch:
+      tags: [Controles]
+      summary: Actualizar control y registrar historial
+      parameters:
+        - $ref: "#/components/parameters/ControlId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+  /controls/{controlId}/history:
+    get:
+      tags: [Controles]
+      summary: Consultar historial del control
+      parameters:
+        - $ref: "#/components/parameters/ControlId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+  /controls/{controlId}/deactivate:
+    post:
+      tags: [Controles]
+      summary: Desactivar control y recalcular residual
+      parameters:
+        - $ref: "#/components/parameters/ControlId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+  /mitigation-plans/{planId}:
+    patch:
+      tags: [Mitigación]
+      summary: Actualizar plan de mitigación
+      parameters:
+        - $ref: "#/components/parameters/PlanId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+  /mitigation-plans/{planId}/actions:
+    post:
+      tags: [Mitigación]
+      summary: Crear acción de mitigación
+      parameters:
+        - $ref: "#/components/parameters/PlanId"
+      responses:
+        "201": { $ref: "#/components/responses/Success" }
+  /mitigation-plans/{planId}/deactivate:
+    post:
+      tags: [Mitigación]
+      summary: Desactivar plan de mitigación
+      parameters:
+        - $ref: "#/components/parameters/PlanId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+  /mitigation-actions/{actionId}:
+    patch:
+      tags: [Mitigación]
+      summary: Actualizar acción y avance
+      parameters:
+        - $ref: "#/components/parameters/ActionId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+  /mitigation-actions/{actionId}/deactivate:
+    post:
+      tags: [Mitigación]
+      summary: Desactivar acción de mitigación
+      parameters:
+        - $ref: "#/components/parameters/ActionId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+  /audits:
+    get:
+      tags: [Auditorías]
+      summary: Listar auditorías
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+    post:
+      tags: [Auditorías]
+      summary: Planificar auditoría con equipo
+      responses:
+        "201": { $ref: "#/components/responses/Success" }
+  /audits/{auditId}:
+    get:
+      tags: [Auditorías]
+      summary: Consultar auditoría y equipo
+      parameters:
+        - $ref: "#/components/parameters/AuditId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+  /audits/{auditId}/transition:
+    post:
+      tags: [Auditorías]
+      summary: Cambiar estado de la auditoría
+      parameters:
+        - $ref: "#/components/parameters/AuditId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+  /audits/{auditId}/findings:
+    get:
+      tags: [Auditorías]
+      summary: Listar hallazgos
+      parameters:
+        - $ref: "#/components/parameters/AuditId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+    post:
+      tags: [Auditorías]
+      summary: Registrar hallazgo
+      parameters:
+        - $ref: "#/components/parameters/AuditId"
+      responses:
+        "201": { $ref: "#/components/responses/Success" }
+  /findings/{findingId}:
+    get:
+      tags: [Auditorías]
+      summary: Consultar hallazgo
+      parameters:
+        - $ref: "#/components/parameters/FindingId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+    put:
+      tags: [Auditorías]
+      summary: Actualizar hallazgo
+      parameters:
+        - $ref: "#/components/parameters/FindingId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+  /findings/{findingId}/response:
+    post:
+      tags: [Auditorías]
+      summary: Registrar respuesta y responsable
+      parameters:
+        - $ref: "#/components/parameters/FindingId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+  /findings/{findingId}/close:
+    post:
+      tags: [Auditorías]
+      summary: Cerrar hallazgo validando evidencia
+      parameters:
+        - $ref: "#/components/parameters/FindingId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+  /regulations:
+    get:
+      tags: [Cumplimiento]
+      summary: Listar normativas
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+    post:
+      tags: [Cumplimiento]
+      summary: Crear normativa
+      responses:
+        "201": { $ref: "#/components/responses/Success" }
+  /regulations/{regulationId}:
+    get:
+      tags: [Cumplimiento]
+      summary: Consultar normativa
+      parameters:
+        - $ref: "#/components/parameters/RegulationId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+    put:
+      tags: [Cumplimiento]
+      summary: Actualizar normativa
+      parameters:
+        - $ref: "#/components/parameters/RegulationId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+  /regulations/{regulationId}/requirements:
+    get:
+      tags: [Cumplimiento]
+      summary: Listar requisitos versionados
+      parameters:
+        - $ref: "#/components/parameters/RegulationId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+    post:
+      tags: [Cumplimiento]
+      summary: Crear requisito o nueva versión
+      parameters:
+        - $ref: "#/components/parameters/RegulationId"
+      responses:
+        "201": { $ref: "#/components/responses/Success" }
+  /regulations/{regulationId}/requirements/{requirementId}:
+    get:
+      tags: [Cumplimiento]
+      summary: Consultar requisito y su historial
+      parameters:
+        - $ref: "#/components/parameters/RegulationId"
+        - $ref: "#/components/parameters/RequirementId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+    put:
+      tags: [Cumplimiento]
+      summary: Actualizar metadatos o crear una nueva versión
+      parameters:
+        - $ref: "#/components/parameters/RegulationId"
+        - $ref: "#/components/parameters/RequirementId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+        "201": { $ref: "#/components/responses/Success" }
+  /compliance/evaluations:
+    get:
+      tags: [Cumplimiento]
+      summary: Listar evaluaciones periódicas
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+    post:
+      tags: [Cumplimiento]
+      summary: Crear evaluación única por requisito, unidad y periodo
+      responses:
+        "201": { $ref: "#/components/responses/Success" }
+        "409": { $ref: "#/components/responses/Error" }
+  /compliance/evaluations/{evaluationId}:
+    get:
+      tags: [Cumplimiento]
+      summary: Consultar evaluación y evidencias
+      parameters:
+        - $ref: "#/components/parameters/EvaluationId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+  /alerts:
+    get:
+      tags: [Alertas]
+      summary: Bandeja de alertas del usuario
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+  /alerts/engine:
+    post:
+      tags: [Alertas]
+      summary: Ejecutar AL-01 a AL-07 manualmente
+      responses:
+        "201": { $ref: "#/components/responses/Success" }
+  /alerts/{alertId}/attend:
+    post:
+      tags: [Alertas]
+      summary: Atender con comentario obligatorio
+      parameters:
+        - $ref: "#/components/parameters/AlertId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+  /alerts/{alertId}/reopen:
+    post:
+      tags: [Alertas]
+      summary: Reabrir alerta y conservar el evento
+      parameters:
+        - $ref: "#/components/parameters/AlertId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+  /evidence:
+    get:
+      tags: [Evidencias]
+      summary: Listar evidencia con autorización heredada
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+    post:
+      tags: [Evidencias]
+      summary: Adjuntar evidencia mediante enlace
+      responses:
+        "201": { $ref: "#/components/responses/Success" }
+  /evidence/upload:
+    post:
+      tags: [Evidencias]
+      summary: Adjuntar archivo validado a Storage externo
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, entityType, entityId]
+              properties:
+                file: { type: string, format: binary }
+                entityType: { type: string }
+                entityId: { type: string, format: uuid }
+      responses:
+        "201": { $ref: "#/components/responses/Success" }
+  /evidence/{evidenceId}/download:
+    get:
+      tags: [Evidencias]
+      summary: Autorizar y redirigir a la descarga temporal
+      parameters:
+        - $ref: "#/components/parameters/EvidenceId"
+      responses:
+        "307":
+          description: Redirección temporal autorizada
+  /dashboard/summary:
+    get:
+      tags: [Reportes]
+      summary: Indicadores con filtros combinables
+      parameters:
+        - { in: query, name: countryId, schema: { type: string, format: uuid } }
+        - { in: query, name: unitId, schema: { type: string, format: uuid } }
+        - { in: query, name: categoryId, schema: { type: string, format: uuid } }
+        - { in: query, name: ownerId, schema: { type: string, format: uuid } }
+        - { in: query, name: status, schema: { type: string } }
+        - { in: query, name: periodStart, schema: { type: string, format: date } }
+        - { in: query, name: periodEnd, schema: { type: string, format: date } }
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+  /audit-log:
+    get:
+      tags: [Reportes]
+      summary: Consultar bitácora limitada por alcance
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: sgr_eg_session
+  parameters:
+    UserId: { in: path, name: userId, required: true, schema: { type: string, format: uuid } }
+    RoleId: { in: path, name: roleId, required: true, schema: { type: string, format: uuid } }
+    CountryId: { in: path, name: countryId, required: true, schema: { type: string, format: uuid } }
+    UnitId: { in: path, name: unitId, required: true, schema: { type: string, format: uuid } }
+    CategoryId: { in: path, name: categoryId, required: true, schema: { type: string, format: uuid } }
+    RiskId: { in: path, name: riskId, required: true, schema: { type: string, format: uuid } }
+    ControlId: { in: path, name: controlId, required: true, schema: { type: string, format: uuid } }
+    PlanId: { in: path, name: planId, required: true, schema: { type: string, format: uuid } }
+    ActionId: { in: path, name: actionId, required: true, schema: { type: string, format: uuid } }
+    AuditId: { in: path, name: auditId, required: true, schema: { type: string, format: uuid } }
+    FindingId: { in: path, name: findingId, required: true, schema: { type: string, format: uuid } }
+    RegulationId: { in: path, name: regulationId, required: true, schema: { type: string, format: uuid } }
+    RequirementId: { in: path, name: requirementId, required: true, schema: { type: string, format: uuid } }
+    EvaluationId: { in: path, name: evaluationId, required: true, schema: { type: string, format: uuid } }
+    AlertId: { in: path, name: alertId, required: true, schema: { type: string, format: uuid } }
+    EvidenceId: { in: path, name: evidenceId, required: true, schema: { type: string, format: uuid } }
+  schemas:
+    ApiResponse:
+      type: object
+      required: [data, message, errors]
+      properties:
+        data: {}
+        message: { type: string }
+        errors:
+          type: array
+          items:
+            type: object
+            required: [code, message]
+            properties:
+              code: { type: string }
+              message: { type: string }
+              field: { type: string }
+  responses:
+    Success:
+      description: Operación correcta
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiResponse" }
+    Error:
+      description: Error validado y sin detalles internos
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiResponse" }

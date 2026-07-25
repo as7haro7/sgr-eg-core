@@ -25,7 +25,19 @@ export type AuditLogRecord = Prisma.bitacoraGetPayload<{
 export class AuditLogRepository {
   constructor(private readonly database: AuditLogDatabaseClient = prisma) {}
 
-  async list(query: ListAuditLogQuery) {
+  async list(query: ListAuditLogQuery, unitIds?: string[]) {
+    const scopeFilter = unitIds
+      ? await this.buildUnitScopeFilter(unitIds)
+      : undefined;
+    const searchFilter: Prisma.bitacoraWhereInput | undefined = query.search
+      ? {
+          OR: [
+            { entidad: { contains: query.search, mode: "insensitive" } },
+            { accion: { contains: query.search, mode: "insensitive" } },
+            { resultado: { contains: query.search, mode: "insensitive" } },
+          ],
+        }
+      : undefined;
     const where: Prisma.bitacoraWhereInput = {
       entidad: query.entity,
       accion: query.action,
@@ -38,15 +50,9 @@ export class AuditLogRepository {
             },
           }
         : {}),
-      ...(query.search
-        ? {
-            OR: [
-              { entidad: { contains: query.search, mode: "insensitive" } },
-              { accion: { contains: query.search, mode: "insensitive" } },
-              { resultado: { contains: query.search, mode: "insensitive" } },
-            ],
-          }
-        : {}),
+      AND: [searchFilter, scopeFilter].filter(
+        (filter): filter is Prisma.bitacoraWhereInput => Boolean(filter),
+      ),
     };
 
     const [total, items] = await Promise.all([
@@ -61,5 +67,66 @@ export class AuditLogRepository {
     ]);
 
     return { items, total };
+  }
+
+  private async buildUnitScopeFilter(
+    unitIds: string[],
+  ): Promise<Prisma.bitacoraWhereInput> {
+    if (unitIds.length === 0) {
+      return { id: { equals: BigInt(-1) } };
+    }
+
+    const [risks, controls, plans, actions, audits, findings, evaluations] =
+      await Promise.all([
+        prisma.riesgos.findMany({
+          where: { unidad_id: { in: unitIds } },
+          select: { id: true },
+        }),
+        prisma.controles.findMany({
+          where: { riesgos: { unidad_id: { in: unitIds } } },
+          select: { id: true },
+        }),
+        prisma.planes_mitigacion.findMany({
+          where: { riesgos: { unidad_id: { in: unitIds } } },
+          select: { id: true },
+        }),
+        prisma.acciones_mitigacion.findMany({
+          where: {
+            planes_mitigacion: {
+              riesgos: { unidad_id: { in: unitIds } },
+            },
+          },
+          select: { id: true },
+        }),
+        prisma.auditorias.findMany({
+          where: { unidad_id: { in: unitIds } },
+          select: { id: true },
+        }),
+        prisma.hallazgos.findMany({
+          where: { auditorias: { unidad_id: { in: unitIds } } },
+          select: { id: true },
+        }),
+        prisma.evaluaciones_cumplimiento.findMany({
+          where: { unidad_id: { in: unitIds } },
+          select: { id: true },
+        }),
+      ]);
+
+    const idsByEntity = [
+      ["riesgos", risks],
+      ["controles", controls],
+      ["planes_mitigacion", plans],
+      ["acciones_mitigacion", actions],
+      ["auditorias", audits],
+      ["hallazgos", findings],
+      ["evaluaciones_cumplimiento", evaluations],
+    ] as const;
+
+    return {
+      OR: idsByEntity.map(([entidad, rows]) => ({
+        entidad,
+        entidad_id: { in: rows.map(({ id }) => id) },
+      })),
+    };
   }
 }

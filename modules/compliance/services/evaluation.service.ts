@@ -2,6 +2,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { AppError } from "@/lib/app-error";
 import { withAuditContext } from "@/lib/transaction";
 import { AuthorizationService } from "@/modules/auth/services/authorization.service";
+import { scheduleAlertEvaluation } from "@/modules/alerts/services/alert-trigger.service";
 import type {
   AuthPermission,
   AuthPrincipal,
@@ -273,6 +274,7 @@ export class EvaluationService {
         }),
     );
 
+    scheduleAlertEvaluation();
     return mapEvaluation(evaluation);
   }
 

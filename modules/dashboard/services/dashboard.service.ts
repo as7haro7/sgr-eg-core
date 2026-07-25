@@ -2,6 +2,7 @@ import { DashboardRepository } from "@/modules/dashboard/repositories/dashboard.
 import type { DashboardSummary } from "@/modules/dashboard/types/dashboard.types";
 import type { DashboardFilter } from "@/modules/dashboard/validators/dashboard.validator";
 import type { AuthPrincipal } from "@/modules/auth/types/auth.types";
+import { AppError } from "@/lib/app-error";
 
 export class DashboardService {
   constructor(private readonly repository = new DashboardRepository()) {}
@@ -10,9 +11,21 @@ export class DashboardService {
     filter: DashboardFilter,
     principal: AuthPrincipal,
   ): Promise<DashboardSummary> {
-    // If the user does not have a global scope in any module, restrict their view to their units
-    const hasGlobalScope = principal.permissions.some((p) => p.scope === "global");
-    const unitIdsScope = hasGlobalScope ? [] : principal.unitIds;
+    const reportPermissions = principal.permissions.filter(
+      (permission) =>
+        permission.module === "reportes" && permission.canRead,
+    );
+    if (reportPermissions.length === 0) {
+      throw new AppError(
+        "FORBIDDEN",
+        "No tienes permiso para consultar el dashboard.",
+        403,
+      );
+    }
+    const hasGlobalScope = reportPermissions.some(
+      (permission) => permission.scope === "global",
+    );
+    const unitIdsScope = hasGlobalScope ? undefined : principal.unitIds;
 
     const [
       riskMetrics,

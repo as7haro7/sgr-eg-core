@@ -122,6 +122,37 @@ function parentNotFound(): AppError {
   );
 }
 
+function startsWith(content: Uint8Array, signature: readonly number[]) {
+  return signature.every((byte, index) => content[index] === byte);
+}
+
+function assertFileSignature(content: Uint8Array, mimeType: string): void {
+  const valid =
+    mimeType === "application/pdf"
+      ? startsWith(content, [0x25, 0x50, 0x44, 0x46])
+      : mimeType === "image/png"
+        ? startsWith(content, [0x89, 0x50, 0x4e, 0x47])
+        : mimeType === "image/jpeg"
+          ? startsWith(content, [0xff, 0xd8, 0xff])
+          : mimeType === "image/webp"
+            ? startsWith(content, [0x52, 0x49, 0x46, 0x46]) &&
+              startsWith(content.slice(8), [0x57, 0x45, 0x42, 0x50])
+            : mimeType.includes("openxmlformats-officedocument")
+              ? startsWith(content, [0x50, 0x4b, 0x03, 0x04])
+              : !content.includes(0) &&
+                !startsWith(content, [0x4d, 0x5a]) &&
+                !startsWith(content, [0x7f, 0x45, 0x4c, 0x46]) &&
+                !startsWith(content, [0x23, 0x21]);
+
+  if (!valid) {
+    throw new AppError(
+      "VALIDATION_ERROR",
+      "El contenido del archivo no coincide con un tipo permitido.",
+      400,
+    );
+  }
+}
+
 export class EvidenceService {
   constructor(
     private readonly repository = new EvidenceRepository(),
@@ -212,6 +243,7 @@ export class EvidenceService {
         400,
       );
     }
+    assertFileSignature(content, metadata.mimeType);
 
     const objectPath = `${metadata.entityType}/${metadata.entityId}/${randomUUID()}`;
     await this.storage.upload(objectPath, content, metadata.mimeType);

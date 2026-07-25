@@ -8,6 +8,7 @@ type RiskDatabaseClient = Pick<
   | "apetitos_riesgo"
   | "categorias_riesgo"
   | "controles"
+  | "parametros_sistema"
   | "riesgos"
   | "transiciones_riesgo"
   | "unidades_negocio"
@@ -57,6 +58,13 @@ export type RiskSummaryRecord = Prisma.riesgosGetPayload<{
 
 export class RiskRepository {
   constructor(private readonly database: RiskDatabaseClient = prisma) {}
+
+  findCriticalityRanges() {
+    return this.database.parametros_sistema.findUnique({
+      where: { clave: "criticidad_rangos" },
+      select: { valor: true },
+    });
+  }
 
   async list(
     query: ListRisksQuery,

@@ -108,7 +108,6 @@ export default async function RegulationDetailPage({
           
           <div className="p-6">
             <RequirementList 
-              regulationId={regulationId}
               requirements={requirements} 
               canUpdate={canUpdate} 
             />

@@ -121,6 +121,28 @@ export class RiskConfigurationRepository {
     });
   }
 
+  findOverlappingAppetite(
+    categoryId: string,
+    unitId: string | null,
+    validFrom: Date,
+    validUntil: Date | null,
+  ) {
+    return this.database.apetitos_riesgo.findFirst({
+      where: {
+        categoria_id: categoryId,
+        unidad_id: unitId,
+        ...(validUntil
+          ? { vigente_desde: { lte: validUntil } }
+          : {}),
+        OR: [
+          { vigente_hasta: null },
+          { vigente_hasta: { gte: validFrom } },
+        ],
+      },
+      select: { id: true },
+    });
+  }
+
   createAppetite(data: Prisma.apetitos_riesgoUncheckedCreateInput) {
     return this.database.apetitos_riesgo.create({
       data,

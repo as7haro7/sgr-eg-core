@@ -37,6 +37,14 @@ const evidenceStorageEnvSchema = z.object({
     ),
 });
 
+const emailEnvSchema = z.object({
+  SMTP_HOST: z.string().trim().min(1),
+  SMTP_PORT: z.coerce.number().int().positive(),
+  SMTP_USER: z.string().trim().min(1),
+  SMTP_PASSWORD: z.string().min(1),
+  SMTP_FROM: z.email(),
+});
+
 const parsedEnv = serverEnvSchema.safeParse({
   DATABASE_URL: process.env.DATABASE_URL,
   DIRECT_URL: process.env.DIRECT_URL,
@@ -88,4 +96,15 @@ export function getEvidenceStorageEnv() {
   }
 
   return Object.freeze(parsedStorageEnv.data);
+}
+
+export function getEmailEnv() {
+  const parsed = emailEnvSchema.safeParse({
+    SMTP_HOST: process.env.SMTP_HOST,
+    SMTP_PORT: process.env.SMTP_PORT,
+    SMTP_USER: process.env.SMTP_USER,
+    SMTP_PASSWORD: process.env.SMTP_PASSWORD,
+    SMTP_FROM: process.env.SMTP_FROM,
+  });
+  return parsed.success ? Object.freeze(parsed.data) : null;
 }

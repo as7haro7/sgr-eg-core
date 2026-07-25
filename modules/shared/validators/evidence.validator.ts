@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import {
+  allowedEvidenceMimeTypes,
   blockedEvidenceExtensions,
   blockedEvidenceMimeTypes,
   evidenceEntityTypes,
@@ -45,6 +46,13 @@ export const createFileEvidenceMetadataSchema = evidenceTargetSchema.extend({
           mimeType as (typeof blockedEvidenceMimeTypes)[number],
         ),
       "El tipo de archivo no está permitido.",
+    )
+    .refine(
+      (mimeType) =>
+        allowedEvidenceMimeTypes.includes(
+          mimeType as (typeof allowedEvidenceMimeTypes)[number],
+        ),
+      "Solo se permiten PDF, imágenes, texto, CSV y documentos Office Open XML.",
     ),
   sizeBytes: z.coerce.number<number>().int().positive(),
 });

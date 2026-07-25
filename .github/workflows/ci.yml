@@ -1,0 +1,79 @@
+name: SGR-EG CI
+
+on:
+  push:
+    branches: ["main", "feature/**", "fix/**"]
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: sgr_test
+          POSTGRES_USER: sgr
+          POSTGRES_PASSWORD: sgr_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sgr -d sgr_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://sgr:sgr_test@localhost:5432/sgr_test
+      DIRECT_URL: postgresql://sgr:sgr_test@localhost:5432/sgr_test
+      AUTH_JWT_SECRET: ci-only-secret-with-at-least-32-characters
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+      - run: npm audit --omit=dev --audit-level=high
+      - run: npm run db:migrate
+      - run: npm run db:seed
+      - run: npm test
+        env:
+          RUN_DB_TESTS: "true"
+      - run: npm run build
+      - name: E2E smoke
+        run: |
+          npm start > /tmp/sgr-eg.log 2>&1 &
+          for i in {1..30}; do
+            curl -fsS http://127.0.0.1:3000/login && break
+            sleep 2
+          done
+          npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        with:
+          name: next-build
+          path: .next
+
+  container:
+    runs-on: ubuntu-latest
+    needs: quality
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t sgr-eg:${{ github.sha }} .
+
+  demo-deploy:
+    runs-on: ubuntu-latest
+    needs: [quality, container]
+    if: github.ref == 'refs/heads/main' && vars.DEMO_DEPLOY_ENABLED == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npx vercel deploy --prod --yes --token "${{ secrets.VERCEL_TOKEN }}"
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}

@@ -19,6 +19,17 @@ export const blockedEvidenceMimeTypes = [
   "application/x-sh",
 ] as const;
 
+export const allowedEvidenceMimeTypes = [
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "text/csv",
+  "text/plain",
+] as const;
+
 export const blockedEvidenceExtensions = [
   "exe",
   "dll",

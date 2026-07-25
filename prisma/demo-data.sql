@@ -58,6 +58,10 @@ INSERT INTO usuarios (
   ('20000000-0000-4000-8000-000000000006', 'Diego Rojas',
    'diego.tecnico@gmail.com',
    'scrypt$16384$8$1$ABEiM0RVZneImaq7zN3u_w$QZdbDLrSMb1K7xZ7qweISdFNFmLurg_0fKn74jbG5LErfF-eJY89P5VzxHlIRNvMHa1uMvVkcyOgFCFLC6iS9g',
+   'activo', false),
+  ('20000000-0000-4000-8000-000000000007', 'Administradora Demo',
+   'admin.sgr@gmail.com',
+   'scrypt$16384$8$1$ABEiM0RVZneImaq7zN3u_w$QZdbDLrSMb1K7xZ7qweISdFNFmLurg_0fKn74jbG5LErfF-eJY89P5VzxHlIRNvMHa1uMvVkcyOgFCFLC6iS9g',
    'activo', false)
 ON CONFLICT DO NOTHING;
 
@@ -68,7 +72,8 @@ WITH asignaciones(usuario_id, rol_nombre) AS (
     ('20000000-0000-4000-8000-000000000003'::uuid, 'auditor_interno'),
     ('20000000-0000-4000-8000-000000000004'::uuid, 'responsable_cumplimiento'),
     ('20000000-0000-4000-8000-000000000005'::uuid, 'gerencia'),
-    ('20000000-0000-4000-8000-000000000006'::uuid, 'equipo_tecnico')
+    ('20000000-0000-4000-8000-000000000006'::uuid, 'equipo_tecnico'),
+    ('20000000-0000-4000-8000-000000000007'::uuid, 'administrador')
 )
 INSERT INTO usuario_roles (usuario_id, rol_id)
 SELECT a.usuario_id, r.id
@@ -84,7 +89,8 @@ INSERT INTO usuario_unidades (usuario_id, unidad_id, es_principal) VALUES
   ('20000000-0000-4000-8000-000000000003', '11000000-0000-4000-8000-000000000002', false),
   ('20000000-0000-4000-8000-000000000004', '11000000-0000-4000-8000-000000000003', true),
   ('20000000-0000-4000-8000-000000000005', '11000000-0000-4000-8000-000000000001', true),
-  ('20000000-0000-4000-8000-000000000006', '11000000-0000-4000-8000-000000000004', true)
+  ('20000000-0000-4000-8000-000000000006', '11000000-0000-4000-8000-000000000004', true),
+  ('20000000-0000-4000-8000-000000000007', '11000000-0000-4000-8000-000000000001', true)
 ON CONFLICT DO NOTHING;
 
 SELECT set_config(

@@ -1,4 +1,3 @@
-import { AppError } from "@/lib/app-error";
 import { AuthorizationService } from "@/modules/auth/services/authorization.service";
 import type { AuthPrincipal } from "@/modules/auth/types/auth.types";
 import {
@@ -36,9 +35,18 @@ export class AuditLogService {
     principal: AuthPrincipal,
   ): Promise<PaginatedAuditLog> {
     // Solo usuarios con permiso de configuración pueden ver la bitácora
-    this.authorization.assertAllowed(principal, "configuracion", "read");
+    this.authorization.assertAllowed(principal, "bitacora", "read");
 
-    const result = await this.repository.list(query);
+    const hasGlobalScope = principal.permissions.some(
+      (permission) =>
+        permission.module === "bitacora" &&
+        permission.canRead &&
+        permission.scope === "global",
+    );
+    const result = await this.repository.list(
+      query,
+      hasGlobalScope ? undefined : principal.unitIds,
+    );
 
     return {
       items: result.items.map(mapAuditLog),

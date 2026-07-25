@@ -1,6 +1,7 @@
 import { AppError } from "@/lib/app-error";
 import { withAuditContext } from "@/lib/transaction";
 import { AuthorizationService } from "@/modules/auth/services/authorization.service";
+import { scheduleAlertEvaluation } from "@/modules/alerts/services/alert-trigger.service";
 import type { AuthPrincipal } from "@/modules/auth/types/auth.types";
 import {
   FindingRepository,
@@ -160,6 +161,7 @@ export class FindingService {
       }),
     );
 
+    scheduleAlertEvaluation();
     return mapFinding(updated);
   }
 
@@ -244,6 +246,7 @@ export class FindingService {
         }),
     );
 
+    scheduleAlertEvaluation();
     return mapFinding(finding);
   }
 
@@ -276,6 +279,7 @@ export class FindingService {
         }),
     );
 
+    scheduleAlertEvaluation();
     return mapFinding(updated);
   }
 
@@ -313,6 +317,7 @@ export class FindingService {
         }),
     );
 
+    scheduleAlertEvaluation();
     return mapFinding(updated);
   }
 

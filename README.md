@@ -1,36 +1,132 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SGR-EG
 
-## Getting Started
+Sistema web de Gestión de Riesgos Empresariales Globales. Incluye riesgos,
+controles, mitigación, auditorías, hallazgos, cumplimiento normativo, evidencias,
+alertas, dashboard y bitácora con RBAC por unidad de negocio.
 
-First, run the development server:
+## Requisitos
+
+- Node.js 22 y npm.
+- PostgreSQL 16 o un proyecto Supabase.
+- Para evidencias de archivo: bucket privado de Supabase Storage.
+- Para notificaciones: servidor SMTP.
+- Para respaldo/restauración: `pg_dump` y `pg_restore`.
+
+## Variables de entorno
+
+Copiar `.env.example` a `.env` y reemplazar todos los valores:
+
+- `DATABASE_URL`: conexión agrupada utilizada por la aplicación.
+- `DIRECT_URL`: conexión directa para migraciones, semillas y respaldo.
+- `AUTH_JWT_SECRET`: secreto aleatorio de 32 caracteres o más.
+- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
+  `SUPABASE_EVIDENCE_BUCKET`: Storage privado.
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`:
+  notificaciones de alertas. Si no están presentes, las alertas se conservan
+  en la aplicación y el envío se registra como omitido.
+
+No se deben versionar archivos `.env`.
+
+## Instalación reproducible
 
 ```bash
+npm ci
+npm run db:migrate
+npm run db:seed
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+La aplicación queda disponible en `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+El administrador inicial para un ambiente sin datos se crea de forma
+interactiva:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run bootstrap:admin -- --name "Administrador" --email "admin@example.com"
+```
 
-## Learn More
+## Docker
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+docker compose up --build
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+El contenedor aplica las migraciones y la semilla idempotente antes de iniciar.
+Para cargar archivos reales se deben proporcionar las variables de Supabase.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Datos de demostración
 
-## Deploy on Vercel
+La semilla usa exclusivamente información ficticia. Usuarios disponibles:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `ana.analista@gmail.com`
+- `carlos.propietario@gmail.com`
+- `maria.auditora@gmail.com`
+- `lucia.cumplimiento@gmail.com`
+- `jorge.gerencia@gmail.com`
+- `diego.tecnico@gmail.com`
+- `admin.sgr@gmail.com` (administrador global)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Contraseña común: `DemoSGR2026!`.
+
+## Calidad y pruebas
+
+```bash
+npm run lint
+npm run typecheck
+npm test
+npm run test:coverage
+npm run build
+```
+
+La suite `tests/cp-requirements.test.ts` cubre las reglas mínimas CP-01 a
+CP-10. `tests/database.integration.test.ts` valida restricciones, triggers e
+inmutabilidad sobre PostgreSQL cuando `RUN_DB_TESTS=true`. El pipeline levanta
+PostgreSQL 16, aplica la migración y la semilla, ejecuta ambas suites, recorre
+login/sesión/logout mediante `npm run test:e2e`, analiza secretos y
+dependencias, compila el contenedor y genera el artefacto de demostración.
+
+## Alertas
+
+AL-01 a AL-07 se evalúan:
+
+- al guardar riesgos, controles, planes, acciones, hallazgos, normativas,
+  requisitos o evaluaciones;
+- al iniciar el servidor y cada hora;
+- manualmente desde configuración por un usuario con permiso global de
+  actualización sobre `alertas`.
+
+La restricción parcial de PostgreSQL evita duplicar una alerta pendiente para
+la misma regla, origen y destinatario.
+
+## Respaldo y recuperación
+
+Antes de una demostración:
+
+```bash
+npm run db:backup
+```
+
+El archivo verificable se genera dentro de `backups/`, directorio ignorado por
+Git. Para restaurar en una base vacía:
+
+```bash
+ALLOW_DB_RESTORE=yes npm run db:restore -- backups/sgr-eg-fecha.dump
+```
+
+La restauración exige confirmación explícita y solo acepta archivos ubicados
+dentro de `backups/`.
+
+## API
+
+El contrato está en [`openapi.yaml`](./openapi.yaml). Todas las respuestas JSON
+siguen `{ data, message, errors }`; las descargas de evidencia son redirecciones
+temporales autorizadas a Storage.
+
+## Estructura
+
+- `app/`: páginas y rutas REST de Next.js.
+- `modules/`: componentes, validadores, servicios y repositorios por dominio.
+- `prisma/migrations/`: reconstrucción completa del esquema PostgreSQL.
+- `prisma/demo-data.sql`: semilla idempotente.
+- `tests/`: pruebas automatizadas de requisitos.
+- `scripts/`: creación de administrador, semilla, respaldo y recuperación.

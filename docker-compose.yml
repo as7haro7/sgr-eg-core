@@ -1,0 +1,36 @@
+services:
+  database:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: sgr
+      POSTGRES_USER: sgr
+      POSTGRES_PASSWORD: sgr_demo_password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sgr -d sgr"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - sgr_database:/var/lib/postgresql/data
+
+  app:
+    build: .
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://sgr:sgr_demo_password@database:5432/sgr
+      DIRECT_URL: postgresql://sgr:sgr_demo_password@database:5432/sgr
+      AUTH_JWT_SECRET: local-docker-secret-change-before-production-2026
+      SUPABASE_URL: ${SUPABASE_URL:-https://example.supabase.co}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-not-configured}
+      SUPABASE_EVIDENCE_BUCKET: ${SUPABASE_EVIDENCE_BUCKET:-evidence}
+    command:
+      - /bin/sh
+      - -c
+      - npm run db:migrate && npm run db:seed && npm start
+    ports:
+      - "3000:3000"
+
+volumes:
+  sgr_database:

@@ -1,6 +1,7 @@
 import { AppError } from "@/lib/app-error";
 import { withAuditContext } from "@/lib/transaction";
 import { AuthorizationService } from "@/modules/auth/services/authorization.service";
+import { scheduleAlertEvaluation } from "@/modules/alerts/services/alert-trigger.service";
 import type { AuthPrincipal } from "@/modules/auth/types/auth.types";
 import {
   RegulationRepository,
@@ -68,7 +69,11 @@ export class RegulationService {
     principal: AuthPrincipal,
   ): Promise<PaginatedRegulations> {
     this.assertCanRead(principal);
-    const result = await this.repository.listRegulations(query);
+    const allowedCountryIds = await this.getAllowedCountryIds(principal);
+    const result = await this.repository.listRegulations(
+      query,
+      allowedCountryIds,
+    );
 
     return {
       items: result.items.map(mapRegulation),
@@ -89,6 +94,7 @@ export class RegulationService {
     if (!regulation) {
       throw new AppError("NOT_FOUND", "La normativa no existe.", 404);
     }
+    await this.assertCountryAllowed(principal, regulation.pais_id);
 
     return mapRegulation(regulation);
   }
@@ -105,6 +111,7 @@ export class RegulationService {
         throw new AppError("VALIDATION_ERROR", "El país no existe o está inactivo.", 400);
       }
     }
+    await this.assertCountryAllowed(principal, input.countryId);
 
     const duplicate = await this.repository.findRegulationByUnique(
       input.name,
@@ -131,6 +138,7 @@ export class RegulationService {
       }),
     );
 
+    scheduleAlertEvaluation();
     return mapRegulation(regulation);
   }
 
@@ -145,6 +153,10 @@ export class RegulationService {
     if (!existing) {
       throw new AppError("NOT_FOUND", "La normativa no existe.", 404);
     }
+    await this.assertCountryAllowed(
+      principal,
+      input.countryId === undefined ? existing.pais_id : input.countryId,
+    );
 
     const regulation = await withAuditContext(principal.userId, (tx) =>
       new RegulationRepository(tx).updateRegulation(regulationId, {
@@ -158,6 +170,7 @@ export class RegulationService {
       }),
     );
 
+    scheduleAlertEvaluation();
     return mapRegulation(regulation);
   }
 
@@ -169,7 +182,7 @@ export class RegulationService {
     principal: AuthPrincipal,
   ): Promise<PaginatedRequirements> {
     this.assertCanRead(principal);
-    await this.assertRegulationExists(regulationId);
+    await this.assertRegulationExists(regulationId, principal);
     const result = await this.repository.listRequirements(regulationId, query);
 
     return {
@@ -187,7 +200,7 @@ export class RegulationService {
     principal: AuthPrincipal,
   ): Promise<RequirementSummary> {
     this.assertCanRead(principal);
-    await this.assertRegulationExists(regulationId);
+    await this.assertRegulationExists(regulationId, principal);
     const requirement = await this.repository.findRequirementById(requirementId);
 
     if (!requirement || requirement.normativa_id !== regulationId) {
@@ -208,6 +221,7 @@ export class RegulationService {
     if (!regulation) {
       throw new AppError("NOT_FOUND", "La normativa no existe.", 404);
     }
+    await this.assertCountryAllowed(principal, regulation.pais_id);
 
     if (regulation.estado !== "vigente") {
       throw new AppError(
@@ -219,11 +233,32 @@ export class RegulationService {
 
     // Determine version: if rootRequirementId provided → next version, else 1
     let version = 1;
-    let rootId = input.rootRequirementId;
+    let rootId: string | null = null;
 
-    if (rootId) {
+    if (input.rootRequirementId) {
+      const rootRequirement = await this.repository.findRequirementById(
+        input.rootRequirementId,
+      );
+      if (
+        !rootRequirement ||
+        rootRequirement.normativa_id !== regulationId
+      ) {
+        throw new AppError(
+          "VALIDATION_ERROR",
+          "El requisito raíz no existe en esta normativa.",
+          400,
+        );
+      }
+      if (rootRequirement.codigo !== input.code) {
+        throw new AppError(
+          "VALIDATION_ERROR",
+          "Una nueva versión debe conservar el código del requisito raíz.",
+          400,
+        );
+      }
+      rootId = rootRequirement.requisito_raiz_id ?? rootRequirement.id;
       const latest = await this.repository.getLatestVersion(regulationId, rootId);
-      version = latest ? latest.version + 1 : 1;
+      version = (latest?.version ?? rootRequirement.version) + 1;
     }
 
     const duplicate = await this.repository.findRequirementByCode(
@@ -253,6 +288,7 @@ export class RegulationService {
       }),
     );
 
+    scheduleAlertEvaluation();
     return mapRequirement(requirement);
   }
 
@@ -263,22 +299,59 @@ export class RegulationService {
     principal: AuthPrincipal,
   ): Promise<RequirementSummary> {
     this.authorization.assertAllowed(principal, "cumplimiento", "update");
-    await this.assertRegulationExists(regulationId);
+    await this.assertRegulationExists(regulationId, principal);
     const existing = await this.repository.findRequirementById(requirementId);
 
     if (!existing || existing.normativa_id !== regulationId) {
       throw new AppError("NOT_FOUND", "El requisito no existe.", 404);
     }
 
-    const requirement = await withAuditContext(principal.userId, (tx) =>
-      new RegulationRepository(tx).updateRequirement(requirementId, {
-        descripcion: input.description,
-        criticidad: input.criticality,
-        vigencia_fin: input.validUntil,
-        vigente: input.active,
-      }),
+    const changesVersionedContent =
+      (input.description !== undefined &&
+        input.description !== existing.descripcion) ||
+      (input.criticality !== undefined &&
+        input.criticality !== existing.criticidad);
+
+    const requirement = await withAuditContext(
+      principal.userId,
+      async (tx) => {
+        const repository = new RegulationRepository(tx);
+        if (!changesVersionedContent) {
+          return repository.updateRequirement(requirementId, {
+            vigencia_fin: input.validUntil,
+            vigente: input.active,
+          });
+        }
+
+        const rootId = existing.requisito_raiz_id ?? existing.id;
+        const latest = await repository.getLatestVersion(
+          regulationId,
+          rootId,
+        );
+        const validFrom = new Date();
+        validFrom.setUTCHours(0, 0, 0, 0);
+        await repository.updateRequirement(existing.id, {
+          vigente: false,
+          vigencia_fin:
+            existing.vigencia_fin && existing.vigencia_fin < validFrom
+              ? existing.vigencia_fin
+              : validFrom,
+        });
+        return repository.createRequirement({
+          normativa_id: regulationId,
+          codigo: existing.codigo,
+          descripcion: input.description ?? existing.descripcion,
+          criticidad: input.criticality ?? existing.criticidad,
+          version: (latest?.version ?? existing.version) + 1,
+          requisito_raiz_id: rootId,
+          vigencia_inicio: validFrom,
+          vigencia_fin: input.validUntil,
+          vigente: input.active ?? true,
+        });
+      },
     );
 
+    scheduleAlertEvaluation();
     return mapRequirement(requirement);
   }
 
@@ -296,10 +369,45 @@ export class RegulationService {
     }
   }
 
-  private async assertRegulationExists(regulationId: string): Promise<void> {
+  private async assertRegulationExists(
+    regulationId: string,
+    principal: AuthPrincipal,
+  ): Promise<void> {
     const regulation = await this.repository.findRegulationById(regulationId);
     if (!regulation) {
       throw new AppError("NOT_FOUND", "La normativa no existe.", 404);
+    }
+    await this.assertCountryAllowed(principal, regulation.pais_id);
+  }
+
+  private async getAllowedCountryIds(
+    principal: AuthPrincipal,
+  ): Promise<string[] | undefined> {
+    const hasGlobal = principal.permissions.some(
+      (permission) =>
+        permission.module === "cumplimiento" &&
+        permission.canRead &&
+        permission.scope === "global",
+    );
+    if (hasGlobal) return undefined;
+    const rows = await this.repository.findCountryIdsForUnits(
+      principal.unitIds,
+    );
+    return rows.map(({ pais_id }) => pais_id);
+  }
+
+  private async assertCountryAllowed(
+    principal: AuthPrincipal,
+    countryId: string | null | undefined,
+  ): Promise<void> {
+    if (!countryId) return;
+    const allowed = await this.getAllowedCountryIds(principal);
+    if (allowed && !allowed.includes(countryId)) {
+      throw new AppError(
+        "FORBIDDEN",
+        "La normativa está fuera del alcance de tus unidades.",
+        403,
+      );
     }
   }
 }

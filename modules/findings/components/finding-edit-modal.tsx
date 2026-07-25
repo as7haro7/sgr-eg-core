@@ -70,7 +70,7 @@ export function FindingEditModal({ finding, users, canUpdate }: FindingEditModal
 
       setIsOpen(false);
       router.refresh();
-    } catch (e) {
+    } catch {
       setFeedback({ type: "error", message: "Error de red al actualizar." });
     }
   };

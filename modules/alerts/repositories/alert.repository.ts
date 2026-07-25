@@ -5,15 +5,20 @@ import type { ListAlertsQuery } from "@/modules/alerts/validators/alert.validato
 
 type AlertDatabaseClient = Pick<
   TransactionClient,
-  | "alertas"
-  | "alerta_historial"
-  | "riesgos"
-  | "controles"
-  | "planes_mitigacion"
   | "acciones_mitigacion"
-  | "hallazgos"
+  | "alerta_historial"
+  | "alertas"
+  | "apetitos_riesgo"
+  | "bitacora"
+  | "controles"
   | "evaluaciones_cumplimiento"
+  | "hallazgos"
+  | "normativas"
+  | "parametros_sistema"
+  | "planes_mitigacion"
   | "requisitos"
+  | "riesgos"
+  | "usuarios"
 >;
 
 export const alertSummarySelect = {
@@ -54,7 +59,11 @@ export class AlertRepository {
     const [total, unreadCount, items] = await Promise.all([
       this.database.alertas.count({ where }),
       this.database.alertas.count({
-        where: { destinatario_id: userId, estado: "pendiente", deleted_at: null },
+        where: {
+          destinatario_id: userId,
+          estado: "pendiente",
+          deleted_at: null,
+        },
       }),
       this.database.alertas.findMany({
         where,
@@ -93,67 +102,67 @@ export class AlertRepository {
     });
   }
 
-  // ── Funciones para el Motor de Alertas ─────────────────────────────────────
-
   async createManyAlerts(data: Prisma.alertasUncheckedCreateInput[]) {
-    if (data.length === 0) return 0;
-    const result = await this.database.alertas.createMany({
+    if (data.length === 0) return [];
+    return this.database.alertas.createManyAndReturn({
       data,
       skipDuplicates: true,
+      select: {
+        destinatario_id: true,
+        mensaje: true,
+        regla_codigo: true,
+        severidad: true,
+      },
     });
-    return result.count;
   }
 
-  // AL-01: Riesgos críticos no aceptados
-  findCriticalUnacceptedRisks() {
+  findRecipientEmails(ids: string[]) {
+    return this.database.usuarios.findMany({
+      where: { id: { in: ids }, estado: "activo", deleted_at: null },
+      select: { id: true, correo: true },
+    });
+  }
+
+  findRisksForAlertEvaluation() {
     return this.database.riesgos.findMany({
       where: {
-        nivel_residual: { gte: 20 }, // Umbral ejemplo de riesgo crítico
-        estado: { not: "aceptado" },
         deleted_at: null,
-        propietario_id: { not: null },
+        estado: { notIn: ["cerrado", "cancelado"] },
       },
       select: {
         id: true,
         propietario_id: true,
+        creado_por: true,
+        categoria_id: true,
+        unidad_id: true,
         codigo: true,
+        nivel_residual: true,
+        categorias_riesgo: { select: { apetito_base: true } },
+        planes_mitigacion: {
+          where: { deleted_at: null, estado: "activo" },
+          select: { id: true },
+          take: 1,
+        },
       },
     });
   }
 
-  // AL-02: Revisiones de riesgo vencidas
-  findOverdueRiskReviews(date: Date) {
-    return this.database.riesgos.findMany({
+  findEffectiveAppetites(date: Date) {
+    return this.database.apetitos_riesgo.findMany({
       where: {
-        fecha_revision: { lt: date },
-        deleted_at: null,
-        propietario_id: { not: null },
+        vigente_desde: { lte: date },
+        OR: [{ vigente_hasta: null }, { vigente_hasta: { gte: date } }],
       },
       select: {
-        id: true,
-        propietario_id: true,
-        codigo: true,
+        categoria_id: true,
+        unidad_id: true,
+        umbral: true,
+        vigente_desde: true,
       },
+      orderBy: { vigente_desde: "desc" },
     });
   }
 
-  // AL-03: Controles inefectivos
-  findIneffectiveControls() {
-    return this.database.controles.findMany({
-      where: {
-        efectividad: { lt: 50 }, // Umbral ejemplo
-        estado: "activo",
-        deleted_at: null,
-        riesgos: { propietario_id: { not: null } },
-      },
-      select: {
-        id: true,
-        riesgos: { select: { propietario_id: true, id: true, codigo: true } },
-      },
-    });
-  }
-
-  // AL-04: Planes de mitigación atrasados
   findOverdueMitigationPlans(date: Date) {
     return this.database.planes_mitigacion.findMany({
       where: {
@@ -161,15 +170,10 @@ export class AlertRepository {
         estado: "activo",
         deleted_at: null,
       },
-      select: {
-        id: true,
-        responsable_id: true,
-        riesgo_id: true,
-      },
+      select: { id: true, responsable_id: true },
     });
   }
 
-  // AL-05: Acciones de mitigación atrasadas
   findOverdueMitigationActions(date: Date) {
     return this.database.acciones_mitigacion.findMany({
       where: {
@@ -177,31 +181,26 @@ export class AlertRepository {
         estado: "activo",
         deleted_at: null,
       },
-      select: {
-        id: true,
-        responsable_id: true,
-        plan_id: true,
-      },
+      select: { id: true, responsable_id: true },
     });
   }
 
-  // AL-06: Hallazgos no cerrados
-  findOverdueFindings(date: Date) {
+  findCriticalFindingsWithoutResponse() {
     return this.database.hallazgos.findMany({
       where: {
-        fecha_limite: { lt: date },
+        severidad: "critica",
+        respuesta: null,
         estado: { not: "cerrado" },
         deleted_at: null,
-        responsable_id: { not: null },
       },
       select: {
         id: true,
         responsable_id: true,
+        auditorias: { select: { responsable_id: true } },
       },
     });
   }
 
-  // AL-07: Evaluaciones de cumplimiento no conformes
   findNonCompliantEvaluations() {
     return this.database.evaluaciones_cumplimiento.findMany({
       where: {
@@ -209,11 +208,88 @@ export class AlertRepository {
         deleted_at: null,
         responsable_plan_id: { not: null },
       },
+      select: { id: true, responsable_plan_id: true },
+    });
+  }
+
+  findExpiringRegulations(until: Date, from: Date) {
+    return this.database.normativas.findMany({
+      where: {
+        estado: "vigente",
+        deleted_at: null,
+        vigencia_fin: { gte: from, lte: until },
+      },
+      select: { id: true, nombre: true },
+    });
+  }
+
+  findExpiringRequirements(until: Date, from: Date) {
+    return this.database.requisitos.findMany({
+      where: {
+        vigente: true,
+        deleted_at: null,
+        vigencia_fin: { gte: from, lte: until },
+      },
+      select: { id: true, codigo: true },
+    });
+  }
+
+  findComplianceRecipients() {
+    return this.database.usuarios.findMany({
+      where: {
+        estado: "activo",
+        deleted_at: null,
+        usuario_roles: {
+          some: {
+            roles: {
+              estado: "activo",
+              permisos_rol: {
+                some: {
+                  puede_actualizar: true,
+                  modulos: { codigo: "cumplimiento" },
+                },
+              },
+            },
+          },
+        },
+      },
+      select: { id: true },
+    });
+  }
+
+  findKeyControls() {
+    return this.database.controles.findMany({
+      where: {
+        es_clave: true,
+        estado: "activo",
+        deleted_at: null,
+        riesgos: { deleted_at: null, propietario_id: { not: null } },
+      },
       select: {
         id: true,
-        responsable_plan_id: true,
-        requisitos: { select: { id: true, normativa_id: true } },
+        efectividad: true,
+        riesgos: { select: { codigo: true, propietario_id: true } },
       },
+    });
+  }
+
+  findControlUpdateHistory(controlIds: string[]) {
+    if (controlIds.length === 0) return Promise.resolve([]);
+    return this.database.bitacora.findMany({
+      where: {
+        entidad: "controles",
+        accion: "update",
+        entidad_id: { in: controlIds },
+      },
+      select: { entidad_id: true, detalles: true, fecha: true },
+      orderBy: [{ fecha: "desc" }, { id: "desc" }],
+    });
+  }
+
+  findAlertDaysParameter() {
+    return this.database.parametros_sistema.findUnique({
+      where: { clave: "alerta_dias_vencimiento" },
+      select: { valor: true },
     });
   }
 }

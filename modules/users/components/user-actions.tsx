@@ -28,7 +28,7 @@ export function UserActions({ userId, status }: UserActionsProps) {
         const data = await res.json();
         alert(data.error || "Ocurrió un error");
       }
-    } catch (e) {
+    } catch {
       alert("Error de conexión");
     } finally {
       setIsLoading(false);
@@ -49,7 +49,7 @@ export function UserActions({ userId, status }: UserActionsProps) {
         const data = await res.json();
         alert(data.error || "Ocurrió un error");
       }
-    } catch (e) {
+    } catch {
       alert("Error de conexión");
     } finally {
       setIsLoading(false);

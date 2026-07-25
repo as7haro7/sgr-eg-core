@@ -44,6 +44,7 @@ export const navigationItems: readonly NavigationItem[] = [
     label: "Inicio",
     href: "/",
     icon: "home",
+    module: "reportes",
   },
   {
     label: "Riesgos",
@@ -80,6 +81,12 @@ export const navigationItems: readonly NavigationItem[] = [
     href: "/settings",
     icon: "settings",
     module: "organizacion",
+  },
+  {
+    label: "Bitácora",
+    href: "/settings/audit-log",
+    icon: "settings",
+    module: "bitacora",
   },
   {
     label: "Alertas",

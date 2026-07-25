@@ -8,7 +8,7 @@ import type {
 
 type RegulationDatabaseClient = Pick<
   TransactionClient,
-  "normativas" | "requisitos" | "paises"
+  "normativas" | "requisitos" | "paises" | "unidades_negocio"
 >;
 
 export const regulationSummarySelect = {
@@ -53,11 +53,26 @@ export type RequirementSummaryRecord = Prisma.requisitosGetPayload<{
 export class RegulationRepository {
   constructor(private readonly database: RegulationDatabaseClient = prisma) {}
 
-  async listRegulations(query: ListRegulationsQuery) {
+  async listRegulations(
+    query: ListRegulationsQuery,
+    allowedCountryIds?: string[],
+  ) {
     const where: Prisma.normativasWhereInput = {
       deleted_at: null,
       estado: query.status,
       pais_id: query.countryId,
+      ...(allowedCountryIds
+        ? {
+            AND: [
+              {
+                OR: [
+                  { pais_id: null },
+                  { pais_id: { in: allowedCountryIds } },
+                ],
+              },
+            ],
+          }
+        : {}),
       ...(query.search
         ? {
             OR: [
@@ -81,6 +96,14 @@ export class RegulationRepository {
     ]);
 
     return { items, total };
+  }
+
+  findCountryIdsForUnits(unitIds: string[]) {
+    return this.database.unidades_negocio.findMany({
+      where: { id: { in: unitIds }, estado: "activo" },
+      distinct: ["pais_id"],
+      select: { pais_id: true },
+    });
   }
 
   findRegulationById(id: string) {
@@ -159,7 +182,11 @@ export class RegulationRepository {
 
   getLatestVersion(regulationId: string, rootId: string) {
     return this.database.requisitos.findFirst({
-      where: { normativa_id: regulationId, requisito_raiz_id: rootId, deleted_at: null },
+      where: {
+        normativa_id: regulationId,
+        deleted_at: null,
+        OR: [{ id: rootId }, { requisito_raiz_id: rootId }],
+      },
       select: { version: true },
       orderBy: { version: "desc" },
     });

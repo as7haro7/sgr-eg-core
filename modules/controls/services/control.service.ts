@@ -1,6 +1,7 @@
 import { AppError } from "@/lib/app-error";
 import { withAuditContext } from "@/lib/transaction";
 import { AuthorizationService } from "@/modules/auth/services/authorization.service";
+import { scheduleAlertEvaluation } from "@/modules/alerts/services/alert-trigger.service";
 import type { AuthPrincipal } from "@/modules/auth/types/auth.types";
 import { controlStatuses } from "@/modules/controls/constants/control";
 import {
@@ -131,6 +132,7 @@ export class ControlService {
       });
     });
 
+    scheduleAlertEvaluation();
     return this.getOverview(riskId, principal);
   }
 
@@ -169,6 +171,7 @@ export class ControlService {
       });
     });
 
+    scheduleAlertEvaluation();
     return this.getOverview(control.riesgo_id, principal);
   }
 
@@ -200,6 +203,7 @@ export class ControlService {
       await repository.update(controlId, { deleted_at: new Date() });
     });
 
+    scheduleAlertEvaluation();
     return this.getOverview(control.riesgo_id, principal);
   }
 

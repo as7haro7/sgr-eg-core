@@ -224,6 +224,19 @@ export class RiskConfigurationService {
         400,
       );
     }
+    const overlap = await this.repository.findOverlappingAppetite(
+      input.categoryId,
+      input.unitId,
+      input.validFrom,
+      input.validUntil,
+    );
+    if (overlap) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "La vigencia se superpone con otra configuración de apetito del mismo alcance.",
+        400,
+      );
+    }
 
     const appetite = await withAuditContext(
       actorId,

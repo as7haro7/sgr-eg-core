@@ -22,7 +22,7 @@ export function AlertEngineButton() {
       } else {
         setResult({ message: data.message || "Error al ejecutar el motor", isError: true });
       }
-    } catch (e) {
+    } catch {
       setResult({ message: "Error de red al ejecutar el motor", isError: true });
     } finally {
       setLoading(false);

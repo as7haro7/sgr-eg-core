@@ -1,6 +1,7 @@
 import { AppError } from "@/lib/app-error";
 import { withAuditContext } from "@/lib/transaction";
 import { AuthorizationService } from "@/modules/auth/services/authorization.service";
+import { scheduleAlertEvaluation } from "@/modules/alerts/services/alert-trigger.service";
 import type { AuthPrincipal } from "@/modules/auth/types/auth.types";
 import { MitigationRepository } from "@/modules/mitigation/repositories/mitigation.repository";
 import type {
@@ -102,6 +103,7 @@ export class MitigationService {
       });
     });
 
+    scheduleAlertEvaluation();
     return this.listAfterAuthorizedMutation(riskId);
   }
 
@@ -141,6 +143,7 @@ export class MitigationService {
       });
     });
 
+    scheduleAlertEvaluation();
     return this.listAfterAuthorizedMutation(plan.riesgo_id);
   }
 
@@ -166,6 +169,7 @@ export class MitigationService {
       await repository.updatePlan(planId, { deleted_at: new Date() });
     });
 
+    scheduleAlertEvaluation();
     return this.listAfterAuthorizedMutation(plan.riesgo_id);
   }
 
@@ -201,6 +205,7 @@ export class MitigationService {
       });
     });
 
+    scheduleAlertEvaluation();
     return this.listAfterAuthorizedMutation(plan.riesgo_id);
   }
 
@@ -250,6 +255,7 @@ export class MitigationService {
 
     if (!refreshedPlan) throw notFound("plan");
 
+    scheduleAlertEvaluation();
     return this.listAfterAuthorizedMutation(refreshedPlan.riesgo_id);
   }
 
@@ -285,6 +291,7 @@ export class MitigationService {
 
     if (!refreshedPlan) throw notFound("plan");
 
+    scheduleAlertEvaluation();
     return this.listAfterAuthorizedMutation(refreshedPlan.riesgo_id);
   }
 

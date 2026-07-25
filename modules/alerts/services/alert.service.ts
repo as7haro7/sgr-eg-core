@@ -75,14 +75,13 @@ export class AlertService {
 
     const updatedAlert = await withAuditContext(principal.userId, async (tx) => {
       const repo = new AlertRepository(tx);
-      const updated = await repo.updateStatus(alertId, "atendida");
-      
       await repo.addHistoryRecord({
         alerta_id: alertId,
         usuario_id: principal.userId,
         evento: "atencion",
         comentario: input.comment,
       });
+      const updated = await repo.updateStatus(alertId, "atendida");
 
       return updated;
     });
@@ -107,14 +106,13 @@ export class AlertService {
 
     const updatedAlert = await withAuditContext(principal.userId, async (tx) => {
       const repo = new AlertRepository(tx);
-      const updated = await repo.updateStatus(alertId, "pendiente");
-      
       await repo.addHistoryRecord({
         alerta_id: alertId,
         usuario_id: principal.userId,
         evento: "reapertura",
         comentario: input.comment,
       });
+      const updated = await repo.updateStatus(alertId, "pendiente");
 
       return updated;
     });

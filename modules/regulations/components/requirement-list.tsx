@@ -7,13 +7,11 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import type { RequirementSummary } from "@/modules/regulations/types/regulation.types";
 
 interface RequirementListProps {
-  regulationId: string;
   requirements: RequirementSummary[];
   canUpdate: boolean;
 }
 
 export function RequirementList({
-  regulationId,
   requirements,
   canUpdate,
 }: RequirementListProps) {
