@@ -43,6 +43,11 @@ export const listAuditsQuerySchema = z.object({
 
 export const auditIdSchema = z.string().uuid("La auditoría no es válida.");
 
+export const transitionAuditSchema = z.object({
+  destination: z.enum(auditStatuses),
+});
+
 export type CreateAuditFormInput = z.input<typeof createAuditSchema>;
 export type CreateAuditInput = z.output<typeof createAuditSchema>;
 export type ListAuditsQuery = z.output<typeof listAuditsQuerySchema>;
+export type TransitionAuditInput = z.output<typeof transitionAuditSchema>;

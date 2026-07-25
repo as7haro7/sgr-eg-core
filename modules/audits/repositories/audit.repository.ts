@@ -5,7 +5,7 @@ import type { ListAuditsQuery } from "@/modules/audits/validators/audit.validato
 
 type AuditDatabaseClient = Pick<
   TransactionClient,
-  "auditorias" | "unidades_negocio" | "usuarios"
+  "auditorias" | "hallazgos" | "unidades_negocio" | "usuarios"
 >;
 
 export const auditSummarySelect = {
@@ -103,6 +103,24 @@ export class AuditRepository {
     return this.database.auditorias.create({
       data,
       select: auditSummarySelect,
+    });
+  }
+
+  update(id: string, data: Prisma.auditoriasUncheckedUpdateInput) {
+    return this.database.auditorias.update({
+      where: { id },
+      data,
+      select: auditSummarySelect,
+    });
+  }
+
+  countOpenFindings(auditId: string) {
+    return this.database.hallazgos.count({
+      where: {
+        auditoria_id: auditId,
+        deleted_at: null,
+        estado: { not: "cerrado" },
+      },
     });
   }
 

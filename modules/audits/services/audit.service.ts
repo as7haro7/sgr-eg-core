@@ -6,6 +6,7 @@ import type {
   AuthPermission,
   AuthPrincipal,
 } from "@/modules/auth/types/auth.types";
+import { auditTransitions } from "@/modules/audits/constants/audit";
 import {
   AuditRepository,
   type AuditSummaryRecord,
@@ -18,7 +19,23 @@ import type {
 import type {
   CreateAuditInput,
   ListAuditsQuery,
+  TransitionAuditInput,
 } from "@/modules/audits/validators/audit.validator";
+
+type AuditRecord = NonNullable<
+  Awaited<ReturnType<AuditRepository["findById"]>>
+>;
+
+function auditAuthorizationContext(audit: AuditRecord) {
+  return {
+    unitId: audit.unidad_id ?? undefined,
+    ownerId: audit.responsable_id,
+    assigneeIds: [
+      audit.responsable_id,
+      ...audit.auditoria_equipo.map(({ usuario_id }) => usuario_id),
+    ],
+  };
+}
 
 function mapAudit(record: AuditSummaryRecord): AuditSummary {
   return {
@@ -129,27 +146,70 @@ export class AuditService {
     auditId: string,
     principal: AuthPrincipal,
   ): Promise<AuditSummary> {
-    const audit = await this.repository.findById(auditId);
-
-    if (!audit) {
-      throw new AppError("NOT_FOUND", "La auditoría no existe.", 404);
-    }
-
-    this.authorization.assertAllowed(
+    const audit = await this.getAuthorizedAudit(
+      auditId,
       principal,
-      "auditorias",
       "read",
-      {
-        unitId: audit.unidad_id ?? undefined,
-        ownerId: audit.responsable_id,
-        assigneeIds: [
-          audit.responsable_id,
-          ...audit.auditoria_equipo.map(({ usuario_id }) => usuario_id),
-        ],
-      },
     );
 
     return mapAudit(audit);
+  }
+
+  async listAvailableTransitions(
+    auditId: string,
+    principal: AuthPrincipal,
+  ) {
+    const audit = await this.getAuthorizedAudit(
+      auditId,
+      principal,
+      "update",
+    );
+
+    return [...auditTransitions[audit.estado]];
+  }
+
+  async transition(
+    auditId: string,
+    input: TransitionAuditInput,
+    principal: AuthPrincipal,
+  ): Promise<AuditSummary> {
+    const audit = await this.getAuthorizedAudit(
+      auditId,
+      principal,
+      "update",
+    );
+    const allowed = auditTransitions[audit.estado].includes(
+      input.destination,
+    );
+
+    if (!allowed) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        `La transición ${audit.estado} → ${input.destination} no está permitida.`,
+        400,
+      );
+    }
+
+    if (
+      input.destination === "cerrada" &&
+      (await this.repository.countOpenFindings(auditId)) > 0
+    ) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "No puedes cerrar la auditoría mientras existan hallazgos abiertos o en seguimiento.",
+        400,
+      );
+    }
+
+    const updated = await withAuditContext(
+      principal.userId,
+      (transaction) =>
+        new AuditRepository(transaction).update(auditId, {
+          estado: input.destination,
+        }),
+    );
+
+    return mapAudit(updated);
   }
 
   async listUserOptions(): Promise<AuditUserOption[]> {
@@ -233,5 +293,26 @@ export class AuditService {
     );
 
     return mapAudit(audit);
+  }
+
+  private async getAuthorizedAudit(
+    auditId: string,
+    principal: AuthPrincipal,
+    action: "read" | "update",
+  ): Promise<AuditRecord> {
+    const audit = await this.repository.findById(auditId);
+
+    if (!audit) {
+      throw new AppError("NOT_FOUND", "La auditoría no existe.", 404);
+    }
+
+    this.authorization.assertAllowed(
+      principal,
+      "auditorias",
+      action,
+      auditAuthorizationContext(audit),
+    );
+
+    return audit;
   }
 }

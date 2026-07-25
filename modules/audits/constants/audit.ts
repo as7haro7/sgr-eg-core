@@ -13,3 +13,13 @@ export const auditStatusLabels: Record<estado_auditoria, string> = {
   cerrada: "Cerrada",
   cancelada: "Cancelada",
 };
+
+export const auditTransitions: Record<
+  estado_auditoria,
+  readonly estado_auditoria[]
+> = {
+  planificada: ["en_ejecucion", "cancelada"],
+  en_ejecucion: ["cerrada", "cancelada"],
+  cerrada: [],
+  cancelada: [],
+};

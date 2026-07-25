@@ -11,6 +11,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { isEvidenceStorageConfigured } from "@/config/env";
 import { AuthorizationService } from "@/modules/auth/services/authorization.service";
 import { getApplicationPrincipal } from "@/modules/auth/services/current-principal.service";
+import { AuditTransitionDialog } from "@/modules/audits/components/audit-transition-dialog";
 import { auditStatusLabels } from "@/modules/audits/constants/audit";
 import { AuditService } from "@/modules/audits/services/audit.service";
 import { auditIdSchema } from "@/modules/audits/validators/audit.validator";
@@ -74,6 +75,9 @@ export default async function AuditDetailPage({
     "update",
     context,
   );
+  const transitions = canUpdate
+    ? await auditService.listAvailableTransitions(audit.id, principal)
+    : [];
   const [evidence, maxEvidenceFileSize] = await Promise.all([
     evidenceService.list(
       { entityType: "audit", entityId: audit.id },
@@ -126,9 +130,17 @@ export default async function AuditDetailPage({
               </p>
             </div>
           </div>
-          <StatusBadge tone={audit.status === "cerrada" ? "success" : audit.status === "cancelada" ? "danger" : "info"}>
-            {auditStatusLabels[audit.status]}
-          </StatusBadge>
+          <div className="flex flex-wrap items-center gap-3">
+            <StatusBadge tone={audit.status === "cerrada" ? "success" : audit.status === "cancelada" ? "danger" : "info"}>
+              {auditStatusLabels[audit.status]}
+            </StatusBadge>
+            {transitions.length > 0 && (
+              <AuditTransitionDialog
+                auditId={audit.id}
+                transitions={transitions}
+              />
+            )}
+          </div>
         </div>
       </header>
 
