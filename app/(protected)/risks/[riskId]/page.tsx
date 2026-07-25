@@ -2,6 +2,7 @@ import { ArrowLeft, ShieldAlert } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { isEvidenceStorageConfigured } from "@/config/env";
 import { AuthorizationService } from "@/modules/auth/services/authorization.service";
 import { getApplicationPrincipal } from "@/modules/auth/services/current-principal.service";
 import { BusinessUnitService } from "@/modules/business-units/services/business-unit.service";
@@ -63,10 +64,13 @@ export default async function RiskDetailPage({
       permission.canUpdate &&
       permission.scope === "global",
   );
-  const evidence = await evidenceService.list(
-    { entityType: "risk", entityId: risk.id },
-    principal,
-  );
+  const [evidence, maxEvidenceFileSize] = await Promise.all([
+    evidenceService.list(
+      { entityType: "risk", entityId: risk.id },
+      principal,
+    ),
+    evidenceService.getMaxFileSize(),
+  ]);
   const [categories, units, owners, transitions] = canUpdate
     ? await Promise.all([
         riskConfigurationService.listCategories(),
@@ -151,6 +155,8 @@ export default async function RiskDetailPage({
             entityId={risk.id}
             evidence={evidence}
             canCreate={canUpdate}
+            maxFileSizeBytes={maxEvidenceFileSize}
+            storageConfigured={isEvidenceStorageConfigured()}
           />
         </section>
 

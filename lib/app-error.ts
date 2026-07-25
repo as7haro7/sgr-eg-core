@@ -10,6 +10,7 @@ export type AppErrorCode =
   | "PASSWORD_CHANGE_REQUIRED"
   | "SESSION_EXPIRED"
   | "SESSION_REVOKED"
+  | "SERVICE_UNAVAILABLE"
   | "VALIDATION_ERROR";
 
 export class AppError extends Error {

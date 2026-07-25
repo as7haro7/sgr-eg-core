@@ -22,6 +22,21 @@ const authEnvSchema = z.object({
     .min(32, "AUTH_JWT_SECRET debe tener al menos 32 caracteres."),
 });
 
+const evidenceStorageEnvSchema = z.object({
+  SUPABASE_URL: z.url("SUPABASE_URL debe ser una URL válida."),
+  SUPABASE_SERVICE_ROLE_KEY: z
+    .string()
+    .min(1, "SUPABASE_SERVICE_ROLE_KEY es obligatoria."),
+  SUPABASE_EVIDENCE_BUCKET: z
+    .string()
+    .trim()
+    .min(1)
+    .regex(
+      /^[a-z0-9][a-z0-9._-]*$/,
+      "SUPABASE_EVIDENCE_BUCKET no es válido.",
+    ),
+});
+
 const parsedEnv = serverEnvSchema.safeParse({
   DATABASE_URL: process.env.DATABASE_URL,
   DIRECT_URL: process.env.DIRECT_URL,
@@ -49,4 +64,28 @@ export function getAuthEnv() {
   }
 
   return Object.freeze(parsedAuthEnv.data);
+}
+
+export function isEvidenceStorageConfigured(): boolean {
+  return evidenceStorageEnvSchema.safeParse({
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    SUPABASE_EVIDENCE_BUCKET: process.env.SUPABASE_EVIDENCE_BUCKET,
+  }).success;
+}
+
+export function getEvidenceStorageEnv() {
+  const parsedStorageEnv = evidenceStorageEnvSchema.safeParse({
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    SUPABASE_EVIDENCE_BUCKET: process.env.SUPABASE_EVIDENCE_BUCKET,
+  });
+
+  if (!parsedStorageEnv.success) {
+    throw new Error(
+      "El almacenamiento de evidencias no está configurado correctamente.",
+    );
+  }
+
+  return Object.freeze(parsedStorageEnv.data);
 }

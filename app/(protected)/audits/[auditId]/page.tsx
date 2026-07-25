@@ -1,0 +1,159 @@
+import { ArrowLeft, ClipboardCheck, UsersRound } from "lucide-react";
+import type { Metadata } from "next";
+import Link from "next/link";
+
+import { StatusBadge } from "@/components/ui/status-badge";
+import { isEvidenceStorageConfigured } from "@/config/env";
+import { AuthorizationService } from "@/modules/auth/services/authorization.service";
+import { getApplicationPrincipal } from "@/modules/auth/services/current-principal.service";
+import { auditStatusLabels } from "@/modules/audits/constants/audit";
+import { AuditService } from "@/modules/audits/services/audit.service";
+import { auditIdSchema } from "@/modules/audits/validators/audit.validator";
+import { EvidencePanel } from "@/modules/shared/components/evidence-panel";
+import { EvidenceService } from "@/modules/shared/services/evidence.service";
+
+export const metadata: Metadata = {
+  title: "Detalle de auditoría | SGR-EG",
+};
+
+export const dynamic = "force-dynamic";
+
+const auditService = new AuditService();
+const authorizationService = new AuthorizationService();
+const evidenceService = new EvidenceService();
+
+interface AuditDetailPageProps {
+  params: Promise<{ auditId: string }>;
+}
+
+function formatDate(value: Date | null): string {
+  if (!value) return "Sin fecha definida";
+
+  return new Intl.DateTimeFormat("es-BO", {
+    dateStyle: "long",
+    timeZone: "UTC",
+  }).format(value);
+}
+
+export default async function AuditDetailPage({
+  params,
+}: AuditDetailPageProps) {
+  const principal = await getApplicationPrincipal();
+  const auditId = auditIdSchema.parse((await params).auditId);
+  const audit = await auditService.getById(auditId, principal);
+  const context = {
+    unitId: audit.unit?.id,
+    ownerId: audit.responsible.id,
+    assigneeIds: [
+      audit.responsible.id,
+      ...audit.team.map(({ id }) => id),
+    ],
+  };
+  const canUpdate = authorizationService.isAllowed(
+    principal,
+    "auditorias",
+    "update",
+    context,
+  );
+  const [evidence, maxEvidenceFileSize] = await Promise.all([
+    evidenceService.list(
+      { entityType: "audit", entityId: audit.id },
+      principal,
+    ),
+    evidenceService.getMaxFileSize(),
+  ]);
+
+  return (
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <header className="border-b border-slate-200 p-6">
+        <Link
+          href="/audits"
+          className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-blue-700"
+        >
+          <ArrowLeft aria-hidden="true" className="size-4" />
+          Volver a auditorías
+        </Link>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-blue-700 text-white">
+              <ClipboardCheck aria-hidden="true" className="size-6" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-950">
+                {audit.objective}
+              </h1>
+              <p className="mt-1 text-sm text-slate-600">
+                {audit.unit?.name ?? "Alcance corporativo"}
+              </p>
+            </div>
+          </div>
+          <StatusBadge tone={audit.status === "cerrada" ? "success" : audit.status === "cancelada" ? "danger" : "info"}>
+            {auditStatusLabels[audit.status]}
+          </StatusBadge>
+        </div>
+      </header>
+
+      <div className="grid gap-6 p-6 md:grid-cols-2 xl:grid-cols-4">
+        <Detail label="Inicio" value={formatDate(audit.startDate)} />
+        <Detail label="Finalización" value={formatDate(audit.endDate)} />
+        <Detail label="Responsable" value={audit.responsible.name} />
+        <Detail label="Hallazgos" value={String(audit.findingCount)} />
+        <Detail label="Alcance" value={audit.scope} wide />
+      </div>
+
+      <section className="border-t border-slate-200 p-6">
+        <div className="mb-4 flex items-center gap-2">
+          <UsersRound aria-hidden="true" className="size-5 text-blue-700" />
+          <h2 className="text-lg font-bold text-slate-950">Equipo auditor</h2>
+        </div>
+        {audit.team.length > 0 ? (
+          <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {audit.team.map((member) => (
+              <li key={member.id} className="rounded-xl bg-slate-50 p-4">
+                <p className="font-semibold text-slate-950">{member.name}</p>
+                <p className="mt-1 text-sm text-slate-600">
+                  {member.function ?? "Integrante"}
+                </p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-slate-500">
+            No se registraron integrantes adicionales.
+          </p>
+        )}
+      </section>
+
+      <section className="border-t border-slate-200 p-6">
+        <h2 className="mb-4 text-lg font-bold text-slate-950">Evidencias</h2>
+        <EvidencePanel
+          entityType="audit"
+          entityId={audit.id}
+          evidence={evidence}
+          canCreate={canUpdate}
+          maxFileSizeBytes={maxEvidenceFileSize}
+          storageConfigured={isEvidenceStorageConfigured()}
+        />
+      </section>
+    </section>
+  );
+}
+
+function Detail({
+  label,
+  value,
+  wide = false,
+}: {
+  label: string;
+  value: string;
+  wide?: boolean;
+}) {
+  return (
+    <div className={wide ? "md:col-span-2 xl:col-span-4" : ""}>
+      <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
+        {label}
+      </p>
+      <p className="mt-1 text-sm leading-6 text-slate-800">{value}</p>
+    </div>
+  );
+}

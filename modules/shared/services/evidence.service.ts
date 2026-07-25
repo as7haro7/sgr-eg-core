@@ -1,14 +1,21 @@
+import { randomUUID } from "node:crypto";
+
 import type { Prisma } from "@/generated/prisma/client";
 import { AppError } from "@/lib/app-error";
 import { withAuditContext } from "@/lib/transaction";
 import { AuthorizationService } from "@/modules/auth/services/authorization.service";
 import type { AuthPrincipal } from "@/modules/auth/types/auth.types";
 import type { AuthorizationContext } from "@/modules/auth/types/authorization.types";
-import type { EvidenceEntityType } from "@/modules/shared/constants/evidence";
+import {
+  defaultEvidenceMaxBytes,
+  type EvidenceEntityType,
+} from "@/modules/shared/constants/evidence";
 import { EvidenceRepository } from "@/modules/shared/repositories/evidence.repository";
+import { EvidenceStorageService } from "@/modules/shared/services/evidence-storage.service";
 import type { EvidenceSummary } from "@/modules/shared/types/evidence.types";
 import type {
   CreateLinkEvidenceInput,
+  CreateFileEvidenceMetadataInput,
   EvidenceTarget,
 } from "@/modules/shared/validators/evidence.validator";
 
@@ -43,13 +50,68 @@ function mapEvidence(record: EvidenceRecord): EvidenceSummary {
     name: record.nombre,
     mimeType: record.tipo_mime,
     sizeBytes: record.tamano_bytes?.toString() ?? null,
-    referenceUrl: record.referencia_url,
+    referenceUrl:
+      record.tipo === "archivo"
+        ? `/api/evidence/${record.id}/download`
+        : record.referencia_url,
     author: {
       id: record.usuarios.id,
       name: record.usuarios.nombre,
     },
     createdAt: record.created_at,
   };
+}
+
+const fieldByEntityType: Record<
+  EvidenceEntityType,
+  keyof Prisma.evidenciasUncheckedCreateInput
+> = {
+  risk: "riesgo_id",
+  control: "control_id",
+  plan: "plan_id",
+  action: "accion_id",
+  audit: "auditoria_id",
+  finding: "hallazgo_id",
+  evaluation: "evaluacion_id",
+};
+
+function getTargetFromRecord(record: EvidenceRecord): EvidenceTarget {
+  if (record.riesgo_id) {
+    return { entityType: "risk", entityId: record.riesgo_id };
+  }
+  if (record.control_id) {
+    return { entityType: "control", entityId: record.control_id };
+  }
+  if (record.plan_id) {
+    return { entityType: "plan", entityId: record.plan_id };
+  }
+  if (record.accion_id) {
+    return { entityType: "action", entityId: record.accion_id };
+  }
+  if (record.auditoria_id) {
+    return { entityType: "audit", entityId: record.auditoria_id };
+  }
+  if (record.hallazgo_id) {
+    return { entityType: "finding", entityId: record.hallazgo_id };
+  }
+  if (record.evaluacion_id) {
+    return { entityType: "evaluation", entityId: record.evaluacion_id };
+  }
+
+  throw parentNotFound();
+}
+
+function parseMaxFileSize(value: unknown): number {
+  const parsed =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number(value)
+        : Number.NaN;
+
+  return Number.isSafeInteger(parsed) && parsed > 0
+    ? parsed
+    : defaultEvidenceMaxBytes;
 }
 
 function parentNotFound(): AppError {
@@ -64,6 +126,7 @@ export class EvidenceService {
   constructor(
     private readonly repository = new EvidenceRepository(),
     private readonly authorization = new AuthorizationService(),
+    private readonly storage = new EvidenceStorageService(),
   ) {}
 
   async list(
@@ -96,24 +159,12 @@ export class EvidenceService {
       "update",
       parent.context,
     );
-    const fieldByType: Record<
-      EvidenceEntityType,
-      keyof Prisma.evidenciasUncheckedCreateInput
-    > = {
-      risk: "riesgo_id",
-      control: "control_id",
-      plan: "plan_id",
-      action: "accion_id",
-      audit: "auditoria_id",
-      finding: "hallazgo_id",
-      evaluation: "evaluacion_id",
-    };
     const data = {
       tipo: "enlace",
       nombre: input.name,
       referencia_url: input.referenceUrl,
       autor_id: principal.userId,
-      [fieldByType[input.entityType]]: input.entityId,
+      [fieldByEntityType[input.entityType]]: input.entityId,
     } as Prisma.evidenciasUncheckedCreateInput;
     const evidence = await withAuditContext(
       principal.userId,
@@ -124,6 +175,108 @@ export class EvidenceService {
     );
 
     return mapEvidence(evidence);
+  }
+
+  async getMaxFileSize(): Promise<number> {
+    const parameter = await this.repository.findMaxFileSizeParameter();
+
+    return parseMaxFileSize(parameter?.valor);
+  }
+
+  async createFile(
+    metadata: CreateFileEvidenceMetadataInput,
+    content: Uint8Array,
+    principal: AuthPrincipal,
+  ): Promise<EvidenceSummary> {
+    const parent = await this.resolveParent(metadata);
+    this.authorization.assertAllowed(
+      principal,
+      parent.module,
+      "update",
+      parent.context,
+    );
+    const maxFileSize = await this.getMaxFileSize();
+
+    if (metadata.sizeBytes > maxFileSize) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        `La evidencia excede el tamaño máximo permitido (${maxFileSize} bytes).`,
+        400,
+      );
+    }
+
+    if (content.byteLength !== metadata.sizeBytes) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "El tamaño declarado del archivo no coincide con su contenido.",
+        400,
+      );
+    }
+
+    const objectPath = `${metadata.entityType}/${metadata.entityId}/${randomUUID()}`;
+    await this.storage.upload(objectPath, content, metadata.mimeType);
+
+    try {
+      const evidence = await withAuditContext(
+        principal.userId,
+        async (transaction) => {
+          const repository = new EvidenceRepository(transaction);
+          return repository.create({
+            tipo: "archivo",
+            nombre: metadata.name,
+            tipo_mime: metadata.mimeType,
+            tamano_bytes: BigInt(metadata.sizeBytes),
+            referencia_url: objectPath,
+            autor_id: principal.userId,
+            [fieldByEntityType[metadata.entityType]]: metadata.entityId,
+          } as Prisma.evidenciasUncheckedCreateInput);
+        },
+      );
+
+      return mapEvidence(evidence);
+    } catch (error) {
+      await this.storage.remove(objectPath);
+      throw error;
+    }
+  }
+
+  async getDownloadUrl(
+    evidenceId: string,
+    principal: AuthPrincipal,
+  ): Promise<string> {
+    const evidence = await this.repository.findById(evidenceId);
+
+    if (!evidence || evidence.tipo !== "archivo") {
+      throw new AppError(
+        "NOT_FOUND",
+        "La evidencia de archivo no existe.",
+        404,
+      );
+    }
+
+    const target = getTargetFromRecord(evidence);
+    const parent = await this.resolveParent(target);
+    this.authorization.assertAllowed(
+      principal,
+      parent.module,
+      "read",
+      parent.context,
+    );
+
+    try {
+      const reference = new URL(evidence.referencia_url);
+
+      if (["http:", "https:"].includes(reference.protocol)) {
+        return reference.toString();
+      }
+    } catch {
+      // Las referencias de Storage son rutas internas, no URLs.
+    }
+
+    return this.storage.createSignedDownloadUrl(
+      evidence.referencia_url,
+      evidence.nombre,
+    );
   }
 
   private async resolveParent(

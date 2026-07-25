@@ -11,6 +11,7 @@ type EvidenceDatabaseClient = Pick<
   | "evaluaciones_cumplimiento"
   | "evidencias"
   | "hallazgos"
+  | "parametros_sistema"
   | "planes_mitigacion"
   | "riesgos"
 >;
@@ -70,6 +71,20 @@ export class EvidenceRepository {
     return this.database.evidencias.create({
       data,
       select: evidenceSelect,
+    });
+  }
+
+  findById(evidenceId: string) {
+    return this.database.evidencias.findFirst({
+      where: { id: evidenceId, deleted_at: null },
+      select: evidenceSelect,
+    });
+  }
+
+  findMaxFileSizeParameter() {
+    return this.database.parametros_sistema.findUnique({
+      where: { clave: "evidencia_max_bytes" },
+      select: { valor: true },
     });
   }
 
