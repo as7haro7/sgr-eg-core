@@ -2,6 +2,7 @@ import { ArrowLeft, SlidersHorizontal } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { SectionTabs } from "@/components/ui/section-tabs";
 import { AuthorizationService } from "@/modules/auth/services/authorization.service";
 import { getApplicationPrincipal } from "@/modules/auth/services/current-principal.service";
 import { ControlPanel } from "@/modules/controls/components/control-panel";
@@ -92,6 +93,23 @@ export default async function RiskMitigationPage({ params }: PageProps) {
             </div>
           </div>
         </header>
+        <SectionTabs
+          active="treatment"
+          label="Secciones del riesgo"
+          tabs={[
+            { id: "summary", label: "Resumen", href: `/risks/${risk.id}` },
+            {
+              id: "treatment",
+              label: "Controles y mitigación",
+              href: `/risks/${risk.id}/mitigation`,
+            },
+            {
+              id: "evidence",
+              label: "Evidencias",
+              href: `/risks/${risk.id}?section=evidence`,
+            },
+          ]}
+        />
 
         <div className="space-y-10 p-6">
           <div>

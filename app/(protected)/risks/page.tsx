@@ -1,4 +1,4 @@
-import { ArrowLeft, ShieldAlert } from "lucide-react";
+import { ArrowLeft, Plus, ShieldAlert } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -10,7 +10,6 @@ import {
   riskStatuses,
   riskStatusLabels,
 } from "@/modules/risks/constants/risk-status";
-import { RiskForm } from "@/modules/risks/components/risk-form";
 import { RiskConfigurationService } from "@/modules/risks/services/risk-configuration.service";
 import { RiskService } from "@/modules/risks/services/risk.service";
 import { listRisksQuerySchema } from "@/modules/risks/validators/risk.validator";
@@ -76,20 +75,6 @@ export default async function RisksPage({ searchParams }: RisksPageProps) {
     ),
   );
   const canCreate = createUnits.length > 0;
-  const hasGlobalCreate = principal.permissions.some(
-    (permission) =>
-      permission.module === "riesgos" &&
-      permission.canCreate &&
-      permission.scope === "global",
-  );
-  const owners = canCreate
-    ? await riskService.listOwnerOptions(
-        hasGlobalCreate ? undefined : createUnits.map(({ id }) => id),
-      )
-    : [];
-  const activeCategories = categories.filter(
-    ({ status }) => status === "activo",
-  );
 
   return (
     <div className="w-full">
@@ -102,7 +87,8 @@ export default async function RisksPage({ searchParams }: RisksPageProps) {
             <ArrowLeft className="size-4" />
             Volver
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
             <div className="flex size-10 items-center justify-center rounded-lg bg-slate-950 text-white dark:bg-white dark:text-slate-950">
               <ShieldAlert className="size-5" />
             </div>
@@ -114,16 +100,18 @@ export default async function RisksPage({ searchParams }: RisksPageProps) {
                 {risks.total} riesgo{risks.total === 1 ? "" : "s"} dentro de tu alcance
               </p>
             </div>
+            </div>
+            {canCreate && (
+              <Link
+                href="/risks/new"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-semibold text-white hover:bg-blue-800"
+              >
+                <Plus aria-hidden="true" className="size-4" />
+                Nuevo riesgo
+              </Link>
+            )}
           </div>
         </header>
-
-        {canCreate && (
-          <RiskForm
-            categories={activeCategories}
-            units={createUnits}
-            owners={owners}
-          />
-        )}
 
         <form
           className="grid gap-3 border-b border-slate-200 bg-slate-50 p-4 sm:grid-cols-2 lg:grid-cols-5 dark:border-slate-800 dark:bg-slate-950/40"
@@ -155,7 +143,55 @@ export default async function RisksPage({ searchParams }: RisksPageProps) {
           </button>
         </form>
 
-        <div className="overflow-x-auto">
+        <ul className="divide-y divide-slate-200 md:hidden">
+          {risks.items.map((risk) => (
+            <li key={risk.id} className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <Link
+                  href={`/risks/${risk.id}`}
+                  className="font-semibold text-slate-950 hover:text-blue-700"
+                >
+                  {risk.code} · {risk.title}
+                </Link>
+                <StatusBadge status={risk.status} />
+              </div>
+              <p className="mt-2 line-clamp-2 text-sm text-slate-600">
+                {risk.description}
+              </p>
+              <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <dt className="text-xs text-slate-500">Unidad</dt>
+                  <dd className="font-medium">{risk.unit.name}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-slate-500">Propietario</dt>
+                  <dd className="font-medium">
+                    {risk.owner?.name ?? "Pendiente"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-slate-500">Inherente</dt>
+                  <dd className="font-bold tabular-nums">
+                    {risk.inherentLevel}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-slate-500">Residual</dt>
+                  <dd className="font-bold tabular-nums">
+                    {risk.residualLevel}
+                  </dd>
+                </div>
+              </dl>
+            </li>
+          ))}
+        </ul>
+        {risks.items.length === 0 && (
+          <p className="p-8 text-center text-sm text-slate-500 md:hidden">
+            No existen riesgos para los filtros seleccionados.
+          </p>
+        )}
+
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-4xl text-left text-sm">
             <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-600 dark:bg-slate-950/50 dark:text-slate-400">
               <tr>

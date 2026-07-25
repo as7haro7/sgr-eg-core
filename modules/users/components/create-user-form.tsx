@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { LoaderCircle, UserPlus } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -18,11 +18,16 @@ import {
 import type { ApiResponse } from "@/types/api-response";
 
 interface CreateUserFormProps {
+  onSuccess?: () => void;
   roles: RoleOption[];
   units: BusinessUnitOption[];
 }
 
-export function CreateUserForm({ roles, units }: CreateUserFormProps) {
+export function CreateUserForm({
+  onSuccess,
+  roles,
+  units,
+}: CreateUserFormProps) {
   const router = useRouter();
   const [feedback, setFeedback] = useState<{
     type: "error" | "success";
@@ -106,6 +111,7 @@ export function CreateUserForm({ roles, units }: CreateUserFormProps) {
         message: "Usuario creado correctamente.",
       });
       router.refresh();
+      onSuccess?.();
     } catch {
       setFeedback({
         type: "error",
@@ -115,14 +121,8 @@ export function CreateUserForm({ roles, units }: CreateUserFormProps) {
   };
 
   return (
-    <details className="border-b border-slate-200 dark:border-slate-800">
-      <summary className="flex cursor-pointer list-none items-center gap-2 px-6 py-4 text-sm font-semibold text-slate-900 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-slate-950 dark:text-white dark:hover:bg-slate-950/40 dark:focus-visible:outline-white">
-        <UserPlus aria-hidden="true" className="size-4" />
-        Crear usuario
-      </summary>
-
-      <form
-        className="grid gap-5 border-t border-slate-200 bg-slate-50/70 p-6 md:grid-cols-2 dark:border-slate-800 dark:bg-slate-950/30"
+    <form
+        className="grid gap-5 p-5 sm:p-6 md:grid-cols-2"
         onSubmit={handleSubmit(onSubmit)}
         noValidate
       >
@@ -285,8 +285,7 @@ export function CreateUserForm({ roles, units }: CreateUserFormProps) {
             {isSubmitting ? "Creando..." : "Crear usuario"}
           </Button>
         </div>
-      </form>
-    </details>
+    </form>
   );
 }
 

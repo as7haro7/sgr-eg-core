@@ -6,7 +6,7 @@ import { AuthorizationService } from "@/modules/auth/services/authorization.serv
 import { getApplicationPrincipal } from "@/modules/auth/services/current-principal.service";
 import { BusinessUnitService } from "@/modules/business-units/services/business-unit.service";
 import { RoleService } from "@/modules/roles/services/role.service";
-import { CreateUserForm } from "@/modules/users/components/create-user-form";
+import { CreateUserDialog } from "@/modules/users/components/create-user-dialog";
 import { UserService } from "@/modules/users/services/user.service";
 import { listUsersQuerySchema } from "@/modules/users/validators/user.validator";
 
@@ -90,11 +90,10 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
               </div>
             </div>
           </div>
+          {canCreateUsers && (
+            <CreateUserDialog roles={roles} units={units} />
+          )}
         </header>
-
-        {canCreateUsers && (
-          <CreateUserForm roles={roles} units={units} />
-        )}
 
         <div className="overflow-x-auto">
           <table className="w-full min-w-3xl border-collapse text-left text-sm">

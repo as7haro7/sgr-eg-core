@@ -3,10 +3,11 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Building2, Flag, LoaderCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import type {
   BusinessUnitSummary,
   CountrySummary,
@@ -33,19 +34,59 @@ type Feedback = {
 export function OrganizationForms({
   countries,
 }: OrganizationFormsProps) {
+  const [activeDialog, setActiveDialog] = useState<
+    "country" | "unit" | null
+  >(null);
+  const close = useCallback(() => setActiveDialog(null), []);
   const activeCountries = countries.filter(
     ({ status }) => status === "activo",
   );
 
   return (
-    <div className="grid border-b border-slate-200 lg:grid-cols-2 lg:divide-x lg:divide-slate-200 dark:border-slate-800 dark:lg:divide-slate-800">
-      <CountryForm />
-      <BusinessUnitForm countries={activeCountries} />
-    </div>
+    <>
+      <div className="flex flex-wrap gap-3 border-b border-slate-200 bg-slate-50 p-4">
+        <Button onClick={() => setActiveDialog("country")}>
+          <Flag aria-hidden="true" className="size-4" />
+          Nuevo país
+        </Button>
+        <Button
+          variant="secondary"
+          onClick={() => setActiveDialog("unit")}
+          disabled={activeCountries.length === 0}
+        >
+          <Building2 aria-hidden="true" className="size-4" />
+          Nueva unidad
+        </Button>
+        {activeCountries.length === 0 && (
+          <p className="self-center text-sm text-amber-800">
+            Crea primero un país activo para registrar unidades.
+          </p>
+        )}
+      </div>
+      <Dialog
+        open={activeDialog === "country"}
+        onClose={close}
+        title="Nuevo país"
+        description="Registra el país y su código ISO."
+      >
+        <CountryForm onSuccess={close} />
+      </Dialog>
+      <Dialog
+        open={activeDialog === "unit"}
+        onClose={close}
+        title="Nueva unidad de negocio"
+        description="Asocia la unidad con su país y moneda operativa."
+      >
+        <BusinessUnitForm
+          countries={activeCountries}
+          onSuccess={close}
+        />
+      </Dialog>
+    </>
   );
 }
 
-function CountryForm() {
+function CountryForm({ onSuccess }: { onSuccess: () => void }) {
   const router = useRouter();
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const {
@@ -77,6 +118,7 @@ function CountryForm() {
       reset();
       setFeedback({ type: "success", message: "País creado." });
       router.refresh();
+      onSuccess();
     } catch {
       setFeedback({
         type: "error",
@@ -87,10 +129,6 @@ function CountryForm() {
 
   return (
     <form className="space-y-4 p-6" onSubmit={handleSubmit(onSubmit)}>
-      <FormTitle
-        icon={<Flag aria-hidden="true" className="size-4" />}
-        title="Nuevo país"
-      />
       <Field label="Nombre" id="country-name" error={errors.name?.message}>
         <input
           id="country-name"
@@ -123,8 +161,10 @@ function CountryForm() {
 
 function BusinessUnitForm({
   countries,
+  onSuccess,
 }: {
   countries: CountrySummary[];
+  onSuccess: () => void;
 }) {
   const router = useRouter();
   const [feedback, setFeedback] = useState<Feedback | null>(null);
@@ -165,6 +205,7 @@ function BusinessUnitForm({
         message: "Unidad de negocio creada.",
       });
       router.refresh();
+      onSuccess();
     } catch {
       setFeedback({
         type: "error",
@@ -175,10 +216,6 @@ function BusinessUnitForm({
 
   return (
     <form className="space-y-4 p-6" onSubmit={handleSubmit(onSubmit)}>
-      <FormTitle
-        icon={<Building2 aria-hidden="true" className="size-4" />}
-        title="Nueva unidad de negocio"
-      />
       <Field label="Nombre" id="unit-name" error={errors.name?.message}>
         <input
           id="unit-name"
@@ -233,21 +270,6 @@ function BusinessUnitForm({
         Crear unidad
       </Button>
     </form>
-  );
-}
-
-function FormTitle({
-  icon,
-  title,
-}: {
-  icon: React.ReactNode;
-  title: string;
-}) {
-  return (
-    <h2 className="flex items-center gap-2 text-lg font-bold text-slate-950 dark:text-white">
-      {icon}
-      {title}
-    </h2>
   );
 }
 

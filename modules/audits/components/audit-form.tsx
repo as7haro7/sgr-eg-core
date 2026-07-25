@@ -40,7 +40,6 @@ export function AuditForm({
     formState: { errors, isSubmitting },
     handleSubmit,
     register,
-    reset,
   } = useForm<CreateAuditFormInput, unknown, CreateAuditInput>({
     resolver: zodResolver(createAuditSchema),
     mode: "onChange",
@@ -71,16 +70,8 @@ export function AuditForm({
         message: payload.message,
       });
 
-      if (response.ok) {
-        reset({
-          objective: "",
-          scope: "",
-          startDate: "",
-          endDate: "",
-          responsibleId: currentUserId,
-          unitId: "",
-          teamMemberIds: [],
-        });
+      if (response.ok && payload.data) {
+        router.push(`/audits/${payload.data.id}`);
         router.refresh();
       }
     } catch {

@@ -34,21 +34,25 @@ type Feedback = {
 
 interface RiskConfigurationFormsProps {
   categories: RiskCategorySummary[];
+  section: "categories" | "appetites" | "parameters";
   units: BusinessUnitSummary[];
 }
 
 export function RiskConfigurationForms({
   categories,
+  section,
   units,
 }: RiskConfigurationFormsProps) {
   return (
-    <div className="grid border-b border-slate-200 xl:grid-cols-3 xl:divide-x xl:divide-slate-200 dark:border-slate-800 dark:xl:divide-slate-800">
-      <CategoryForm />
-      <AppetiteForm
-        categories={categories.filter(({ status }) => status === "activo")}
-        units={units.filter(({ status }) => status === "activo")}
-      />
-      <ParameterForm />
+    <div className="border-b border-slate-200 bg-slate-50">
+      {section === "categories" && <CategoryForm />}
+      {section === "appetites" && (
+        <AppetiteForm
+          categories={categories.filter(({ status }) => status === "activo")}
+          units={units.filter(({ status }) => status === "activo")}
+        />
+      )}
+      {section === "parameters" && <ParameterForm />}
     </div>
   );
 }
@@ -127,7 +131,7 @@ function CategoryForm() {
 function AppetiteForm({
   categories,
   units,
-}: RiskConfigurationFormsProps) {
+}: Pick<RiskConfigurationFormsProps, "categories" | "units">) {
   const router = useRouter();
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const {

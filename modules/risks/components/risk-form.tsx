@@ -83,7 +83,6 @@ export function RiskForm({
     formState: { errors, isSubmitting },
     handleSubmit,
     register,
-    reset,
   } = useForm<CreateRiskFormInput, unknown, CreateRiskInput>({
     resolver: zodResolver(createRiskSchema),
     mode: "onChange",
@@ -180,15 +179,15 @@ export function RiskForm({
         return;
       }
 
-      if (!risk) {
-        reset();
-      }
-
       setFeedback({
         type: "success",
         message: risk ? "Riesgo actualizado." : "Riesgo registrado.",
       });
-      router.refresh();
+
+      if (payload.data) {
+        router.push(`/risks/${payload.data.id}`);
+        router.refresh();
+      }
     } catch {
       setFeedback({
         type: "error",

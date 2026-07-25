@@ -18,9 +18,11 @@ import {
 import type { ApiResponse } from "@/types/api-response";
 
 export function RiskTransitionForm({
+  onSuccess,
   riskId,
   transitions,
 }: {
+  onSuccess?: () => void;
   riskId: string;
   transitions: estado_riesgo[];
 }) {
@@ -60,6 +62,7 @@ export function RiskTransitionForm({
 
       if (response.ok) {
         router.refresh();
+        onSuccess?.();
       }
     } catch {
       setMessage("No fue posible conectar con el servidor.");

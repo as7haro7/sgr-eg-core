@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
 import { LogoutButton } from "@/modules/auth/components/logout-button";
@@ -33,10 +33,12 @@ function Navigation({
   items,
   pathname,
   onNavigate,
+  collapsed = false,
 }: {
   items: NavigationItem[];
   pathname: string;
   onNavigate?: () => void;
+  collapsed?: boolean;
 }) {
   return (
     <nav aria-label="Navegación principal" className="flex-1 px-3 py-5">
@@ -51,15 +53,19 @@ function Navigation({
                 href={item.href}
                 onClick={onNavigate}
                 aria-current={active ? "page" : undefined}
+                title={collapsed ? item.label : undefined}
                 className={cn(
                   "flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  collapsed && "justify-center gap-0 px-0",
                   active
                     ? "bg-blue-50 text-blue-800"
                     : "text-slate-600 hover:bg-slate-100 hover:text-slate-950",
                 )}
               >
                 <Icon aria-hidden="true" className="size-5 shrink-0" />
-                {item.label}
+                <span className={collapsed ? "sr-only" : undefined}>
+                  {item.label}
+                </span>
               </Link>
             </li>
           );
@@ -77,6 +83,15 @@ export function AppShell({
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
+  const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const mobileCloseButtonRef = useRef<HTMLButtonElement>(null);
+  const mobileWasOpen = useRef(false);
+
+  useEffect(() => {
+    setDesktopCollapsed(
+      window.localStorage.getItem("sgr-eg-sidebar-collapsed") === "true",
+    );
+  }, []);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -92,6 +107,30 @@ export function AppShell({
     document.addEventListener("keydown", closeOnEscape);
     return () => document.removeEventListener("keydown", closeOnEscape);
   }, [mobileOpen]);
+
+  useEffect(() => {
+    if (mobileOpen) {
+      mobileWasOpen.current = true;
+      mobileCloseButtonRef.current?.focus();
+      return;
+    }
+
+    if (mobileWasOpen.current) {
+      mobileWasOpen.current = false;
+      mobileMenuButtonRef.current?.focus();
+    }
+  }, [mobileOpen]);
+
+  const toggleDesktopSidebar = () => {
+    setDesktopCollapsed((current) => {
+      const next = !current;
+      window.localStorage.setItem(
+        "sgr-eg-sidebar-collapsed",
+        String(next),
+      );
+      return next;
+    });
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -123,15 +162,21 @@ export function AppShell({
           )}
         </div>
 
-        <Navigation items={navigation} pathname={pathname} />
+        <Navigation
+          items={navigation}
+          pathname={pathname}
+          collapsed={desktopCollapsed}
+        />
 
         <button
           type="button"
-          onClick={() => setDesktopCollapsed((current) => !current)}
+          onClick={toggleDesktopSidebar}
           className="m-3 flex min-h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-950"
           aria-label={
             desktopCollapsed ? "Expandir menú lateral" : "Contraer menú lateral"
           }
+          aria-expanded={!desktopCollapsed}
+          title={desktopCollapsed ? "Expandir menú lateral" : undefined}
         >
           <PanelLeftClose
             aria-hidden="true"
@@ -169,6 +214,7 @@ export function AppShell({
                 </div>
               </div>
               <button
+                ref={mobileCloseButtonRef}
                 type="button"
                 onClick={() => setMobileOpen(false)}
                 className="flex size-11 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100"
@@ -195,6 +241,7 @@ export function AppShell({
         <header className="sticky top-0 z-20 flex min-h-18 items-center justify-between gap-4 border-b border-slate-200 bg-white/95 px-4 backdrop-blur sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <button
+              ref={mobileMenuButtonRef}
               type="button"
               onClick={() => setMobileOpen(true)}
               className="flex size-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 lg:hidden"

@@ -21,8 +21,24 @@ const businessUnitService = new BusinessUnitService();
 const riskConfigurationService = new RiskConfigurationService();
 const systemParameterService = new SystemParameterService();
 
-export default async function SettingsPage() {
+interface SettingsPageProps {
+  searchParams: Promise<{ tab?: string | string[] }>;
+}
+
+const settingsTabs = [
+  { id: "categories", label: "Categorías" },
+  { id: "appetites", label: "Apetitos" },
+  { id: "parameters", label: "Parámetros" },
+] as const;
+
+export default async function SettingsPage({
+  searchParams,
+}: SettingsPageProps) {
   const principal = await getApplicationPrincipal();
+  const rawTab = (await searchParams).tab;
+  const requestedTab = Array.isArray(rawTab) ? rawTab[0] : rawTab;
+  const activeTab =
+    settingsTabs.find(({ id }) => id === requestedTab)?.id ?? "categories";
 
   authorizationService.assertAllowed(
     principal,
@@ -73,11 +89,37 @@ export default async function SettingsPage() {
           </div>
         </header>
 
+        <nav
+          aria-label="Secciones de configuración"
+          className="overflow-x-auto border-b border-slate-200 px-4"
+        >
+          <div className="flex min-w-max gap-1">
+            {settingsTabs.map((tab) => (
+              <Link
+                key={tab.id}
+                href={`/settings?tab=${tab.id}`}
+                aria-current={activeTab === tab.id ? "page" : undefined}
+                className={
+                  activeTab === tab.id
+                    ? "border-b-2 border-blue-700 px-4 py-3 text-sm font-semibold text-blue-700"
+                    : "border-b-2 border-transparent px-4 py-3 text-sm font-medium text-slate-600 hover:text-slate-950"
+                }
+              >
+                {tab.label}
+              </Link>
+            ))}
+          </div>
+        </nav>
+
         {canCreate && (
-          <RiskConfigurationForms categories={categories} units={units} />
+          <RiskConfigurationForms
+            categories={categories}
+            units={units}
+            section={activeTab}
+          />
         )}
 
-        <div className="grid lg:grid-cols-2 lg:divide-x lg:divide-slate-200 dark:lg:divide-slate-800">
+        {activeTab === "categories" && (
           <section className="p-6">
             <h2 className="text-lg font-bold text-slate-950 dark:text-white">
               Categorías de riesgo
@@ -104,7 +146,8 @@ export default async function SettingsPage() {
               ))}
             </ul>
           </section>
-
+        )}
+        {activeTab === "appetites" && (
           <section className="p-6">
             <h2 className="text-lg font-bold text-slate-950 dark:text-white">
               Historial de apetito
@@ -135,9 +178,10 @@ export default async function SettingsPage() {
               </ul>
             )}
           </section>
-        </div>
+        )}
 
-        <section className="border-t border-slate-200 p-6 dark:border-slate-800">
+        {activeTab === "parameters" && (
+        <section className="p-6">
           <h2 className="text-lg font-bold text-slate-950 dark:text-white">
             Parámetros del sistema
           </h2>
@@ -167,6 +211,7 @@ export default async function SettingsPage() {
             )}
           </div>
         </section>
+        )}
       </section>
     </div>
   );

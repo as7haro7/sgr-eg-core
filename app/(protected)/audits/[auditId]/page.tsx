@@ -2,6 +2,7 @@ import { ArrowLeft, ClipboardCheck, UsersRound } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { SectionTabs } from "@/components/ui/section-tabs";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { isEvidenceStorageConfigured } from "@/config/env";
 import { AuthorizationService } from "@/modules/auth/services/authorization.service";
@@ -24,6 +25,7 @@ const evidenceService = new EvidenceService();
 
 interface AuditDetailPageProps {
   params: Promise<{ auditId: string }>;
+  searchParams: Promise<{ section?: string | string[] }>;
 }
 
 function formatDate(value: Date | null): string {
@@ -37,9 +39,19 @@ function formatDate(value: Date | null): string {
 
 export default async function AuditDetailPage({
   params,
+  searchParams,
 }: AuditDetailPageProps) {
   const principal = await getApplicationPrincipal();
   const auditId = auditIdSchema.parse((await params).auditId);
+  const rawSection = (await searchParams).section;
+  const requestedSection = Array.isArray(rawSection)
+    ? rawSection[0]
+    : rawSection;
+  const activeSection = ["team", "evidence"].includes(
+    requestedSection ?? "",
+  )
+    ? requestedSection!
+    : "summary";
   const audit = await auditService.getById(auditId, principal);
   const context = {
     unitId: audit.unit?.id,
@@ -93,6 +105,25 @@ export default async function AuditDetailPage({
         </div>
       </header>
 
+      <SectionTabs
+        active={activeSection}
+        label="Secciones de la auditoría"
+        tabs={[
+          { id: "summary", label: "Resumen", href: `/audits/${audit.id}` },
+          {
+            id: "team",
+            label: "Equipo auditor",
+            href: `/audits/${audit.id}?section=team`,
+          },
+          {
+            id: "evidence",
+            label: "Evidencias",
+            href: `/audits/${audit.id}?section=evidence`,
+          },
+        ]}
+      />
+
+      {activeSection === "summary" && (
       <div className="grid gap-6 p-6 md:grid-cols-2 xl:grid-cols-4">
         <Detail label="Inicio" value={formatDate(audit.startDate)} />
         <Detail label="Finalización" value={formatDate(audit.endDate)} />
@@ -100,7 +131,9 @@ export default async function AuditDetailPage({
         <Detail label="Hallazgos" value={String(audit.findingCount)} />
         <Detail label="Alcance" value={audit.scope} wide />
       </div>
+      )}
 
+      {activeSection === "team" && (
       <section className="border-t border-slate-200 p-6">
         <div className="mb-4 flex items-center gap-2">
           <UsersRound aria-hidden="true" className="size-5 text-blue-700" />
@@ -123,7 +156,9 @@ export default async function AuditDetailPage({
           </p>
         )}
       </section>
+      )}
 
+      {activeSection === "evidence" && (
       <section className="border-t border-slate-200 p-6">
         <h2 className="mb-4 text-lg font-bold text-slate-950">Evidencias</h2>
         <EvidencePanel
@@ -135,6 +170,7 @@ export default async function AuditDetailPage({
           storageConfigured={isEvidenceStorageConfigured()}
         />
       </section>
+      )}
     </section>
   );
 }

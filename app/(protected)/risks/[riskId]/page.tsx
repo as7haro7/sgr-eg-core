@@ -1,15 +1,13 @@
-import { ArrowLeft, ShieldAlert } from "lucide-react";
+import { ArrowLeft, PencilLine, ShieldAlert } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { SectionTabs } from "@/components/ui/section-tabs";
 import { isEvidenceStorageConfigured } from "@/config/env";
 import { AuthorizationService } from "@/modules/auth/services/authorization.service";
 import { getApplicationPrincipal } from "@/modules/auth/services/current-principal.service";
-import { BusinessUnitService } from "@/modules/business-units/services/business-unit.service";
-import { RiskForm } from "@/modules/risks/components/risk-form";
-import { RiskTransitionForm } from "@/modules/risks/components/risk-transition-form";
+import { RiskTransitionDialog } from "@/modules/risks/components/risk-transition-dialog";
 import { riskStatusLabels } from "@/modules/risks/constants/risk-status";
-import { RiskConfigurationService } from "@/modules/risks/services/risk-configuration.service";
 import { RiskService } from "@/modules/risks/services/risk.service";
 import { riskIdSchema } from "@/modules/risks/validators/risk.validator";
 import { EvidencePanel } from "@/modules/shared/components/evidence-panel";
@@ -22,21 +20,27 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 const authorizationService = new AuthorizationService();
-const businessUnitService = new BusinessUnitService();
-const riskConfigurationService = new RiskConfigurationService();
 const riskService = new RiskService();
 const evidenceService = new EvidenceService();
 
 interface RiskDetailPageProps {
   params: Promise<{ riskId: string }>;
+  searchParams: Promise<{ section?: string | string[] }>;
 }
 
 export default async function RiskDetailPage({
   params,
+  searchParams,
 }: RiskDetailPageProps) {
   const principal = await getApplicationPrincipal();
 
   const riskId = riskIdSchema.parse((await params).riskId);
+  const rawSection = (await searchParams).section;
+  const requestedSection = Array.isArray(rawSection)
+    ? rawSection[0]
+    : rawSection;
+  const activeSection =
+    requestedSection === "evidence" ? "evidence" : "summary";
   const risk = await riskService.getById(riskId, principal);
   const canUpdate = authorizationService.isAllowed(
     principal,
@@ -58,12 +62,6 @@ export default async function RiskDetailPage({
       assigneeIds: risk.owner ? [risk.owner.id] : [],
     },
   );
-  const hasGlobalUpdate = principal.permissions.some(
-    (permission) =>
-      permission.module === "riesgos" &&
-      permission.canUpdate &&
-      permission.scope === "global",
-  );
   const [evidence, maxEvidenceFileSize] = await Promise.all([
     evidenceService.list(
       { entityType: "risk", entityId: risk.id },
@@ -71,16 +69,9 @@ export default async function RiskDetailPage({
     ),
     evidenceService.getMaxFileSize(),
   ]);
-  const [categories, units, owners, transitions] = canUpdate
-    ? await Promise.all([
-        riskConfigurationService.listCategories(),
-        businessUnitService.listActive(),
-        riskService.listOwnerOptions(
-          hasGlobalUpdate ? undefined : [risk.unit.id],
-        ),
-        riskService.listAvailableTransitions(riskId, principal),
-      ])
-    : [[], [], [], []];
+  const transitions = canUpdate
+    ? await riskService.listAvailableTransitions(riskId, principal)
+    : [];
 
   return (
     <div className="w-full">
@@ -105,12 +96,59 @@ export default async function RiskDetailPage({
                 </h1>
               </div>
             </div>
-            <span className="rounded-full bg-slate-100 px-3 py-1.5 text-sm font-semibold dark:bg-slate-800">
-              {riskStatusLabels[risk.status]}
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              {canUpdate && (
+                <>
+                  <Link
+                    href={`/risks/${risk.id}/edit`}
+                    className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    <PencilLine aria-hidden="true" className="size-4" />
+                    Editar
+                  </Link>
+                  {transitions.length > 0 && (
+                    <RiskTransitionDialog
+                      riskId={risk.id}
+                      transitions={transitions}
+                    />
+                  )}
+                </>
+              )}
+              <span className="rounded-full bg-slate-100 px-3 py-1.5 text-sm font-semibold dark:bg-slate-800">
+                {riskStatusLabels[risk.status]}
+              </span>
+            </div>
           </div>
         </header>
 
+        <SectionTabs
+          active={activeSection}
+          label="Secciones del riesgo"
+          tabs={[
+            {
+              id: "summary",
+              label: "Resumen",
+              href: `/risks/${risk.id}`,
+            },
+            ...(canReadMitigation
+              ? [
+                  {
+                    id: "treatment",
+                    label: "Controles y mitigación",
+                    href: `/risks/${risk.id}/mitigation`,
+                  },
+                ]
+              : []),
+            {
+              id: "evidence",
+              label: "Evidencias",
+              href: `/risks/${risk.id}?section=evidence`,
+            },
+          ]}
+        />
+
+        {activeSection === "summary" && (
+          <>
         <div className="grid gap-6 p-6 md:grid-cols-2 xl:grid-cols-4">
           <Metric label="Nivel inherente" value={risk.inherentLevel} />
           <Metric label="Nivel residual" value={risk.residualLevel} />
@@ -136,18 +174,10 @@ export default async function RiskDetailPage({
             </p>
           </section>
         )}
-
-        {canReadMitigation && (
-          <section className="border-t border-slate-200 p-6 dark:border-slate-800">
-            <Link
-              href={`/risks/${risk.id}/mitigation`}
-              className="inline-flex h-11 items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white dark:bg-white dark:text-slate-950"
-            >
-              Gestionar controles y mitigación
-            </Link>
-          </section>
+          </>
         )}
 
+        {activeSection === "evidence" && (
         <section className="border-t border-slate-200 p-6 dark:border-slate-800">
           <h2 className="mb-4 text-lg font-bold">Evidencias</h2>
           <EvidencePanel
@@ -159,28 +189,8 @@ export default async function RiskDetailPage({
             storageConfigured={isEvidenceStorageConfigured()}
           />
         </section>
-
-        {canUpdate && (
-          <>
-            <section className="border-t border-slate-200 dark:border-slate-800">
-              <h2 className="px-6 pt-6 text-lg font-bold">Editar contexto</h2>
-              <RiskForm
-                risk={risk}
-                categories={categories.filter(({ status }) => status === "activo")}
-                units={units}
-                owners={owners}
-              />
-            </section>
-            {transitions.length > 0 && (
-              <section className="border-t border-slate-200 p-6 dark:border-slate-800">
-                <h2 className="mb-4 text-lg font-bold">Cambiar estado</h2>
-                <div className="max-w-md">
-                  <RiskTransitionForm riskId={risk.id} transitions={transitions} />
-                </div>
-              </section>
-            )}
-          </>
         )}
+
       </section>
     </div>
   );
