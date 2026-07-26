@@ -1,4 +1,4 @@
-import { ArrowLeft, Settings2 } from "lucide-react";
+import { Settings2 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -11,6 +11,8 @@ import { SystemParameterEditor } from "@/modules/shared/components/system-parame
 import { SystemParameterService } from "@/modules/shared/services/system-parameter.service";
 import { OrganizationActions } from "@/modules/business-units/components/organization-actions";
 import { AlertEngineButton } from "@/modules/alerts/components/alert-engine-button";
+import { AdministrationNav } from "@/components/layout/administration-nav";
+import { SectionTabs } from "@/components/ui/section-tabs";
 
 export const metadata: Metadata = {
   title: "Configuración | SGR-EG",
@@ -28,11 +30,11 @@ interface SettingsPageProps {
 }
 
 const settingsTabs = [
-  { id: "categories", label: "Categorías" },
-  { id: "appetites", label: "Apetitos" },
-  { id: "parameters", label: "Parámetros" },
-  { id: "system", label: "Sistema" },
-  { id: "audit-log", label: "Bitácora" },
+  { id: "categories", label: "Categorías", description: "Clasificación de riesgos" },
+  { id: "appetites", label: "Apetitos", description: "Umbrales y vigencias" },
+  { id: "parameters", label: "Parámetros", description: "Valores operativos" },
+  { id: "system", label: "Automatización", description: "Motor de alertas" },
+  { id: "audit-log", label: "Bitácora", description: "Trazabilidad" },
 ] as const;
 
 export default async function SettingsPage({
@@ -79,15 +81,9 @@ export default async function SettingsPage({
 
   return (
     <div className="w-full">
+      <AdministrationNav active="settings" principal={principal} />
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <header className="border-b border-slate-200 p-6 dark:border-slate-800">
-          <Link
-            href="/"
-            className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white"
-          >
-            <ArrowLeft aria-hidden="true" className="size-4" />
-            Volver
-          </Link>
           <div className="flex items-center gap-3">
             <div className="flex size-10 items-center justify-center rounded-lg bg-slate-950 text-white dark:bg-white dark:text-slate-950">
               <Settings2 aria-hidden="true" className="size-5" />
@@ -103,27 +99,14 @@ export default async function SettingsPage({
           </div>
         </header>
 
-        <nav
-          aria-label="Secciones de configuración"
-          className="overflow-x-auto border-b border-slate-200 px-4"
-        >
-          <div className="flex min-w-max gap-1">
-            {settingsTabs.map((tab) => (
-              <Link
-                key={tab.id}
-                href={`/settings?tab=${tab.id}`}
-                aria-current={activeTab === tab.id ? "page" : undefined}
-                className={
-                  activeTab === tab.id
-                    ? "border-b-2 border-blue-700 px-4 py-3 text-sm font-semibold text-blue-700"
-                    : "border-b-2 border-transparent px-4 py-3 text-sm font-medium text-slate-600 hover:text-slate-950"
-                }
-              >
-                {tab.label}
-              </Link>
-            ))}
-          </div>
-        </nav>
+        <SectionTabs
+          active={activeTab}
+          label="Secciones de configuración"
+          tabs={settingsTabs.map((tab) => ({
+            ...tab,
+            href: `/settings?tab=${tab.id}`,
+          }))}
+        />
 
         {canCreate && ["categories", "appetites", "parameters"].includes(activeTab) && (
           <RiskConfigurationForms

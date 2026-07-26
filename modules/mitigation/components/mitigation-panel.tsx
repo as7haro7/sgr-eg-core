@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import {
   mitigationStatuses,
   mitigationStatusLabels,
@@ -34,6 +35,7 @@ interface MitigationPanelProps {
   owners: RiskOwnerOption[];
   canCreate: boolean;
   canUpdate: boolean;
+  canDeactivate: boolean;
   evidenceByEntityId: Record<string, EvidenceSummary[]>;
   maxEvidenceFileSize: number;
   storageConfigured: boolean;
@@ -41,6 +43,7 @@ interface MitigationPanelProps {
 
 export function MitigationPanel({
   canCreate,
+  canDeactivate,
   canUpdate,
   evidenceByEntityId,
   maxEvidenceFileSize,
@@ -70,6 +73,7 @@ export function MitigationPanel({
               entity={plan}
               owners={owners}
               disabled={!canUpdate}
+              canDeactivate={canDeactivate}
             />
             <EvidenceSection
               entityType="plan"
@@ -91,6 +95,7 @@ export function MitigationPanel({
                       entity={action}
                       owners={owners}
                       disabled={!canUpdate}
+                      canDeactivate={canDeactivate}
                       compact
                     />
                     <EvidenceSection
@@ -205,12 +210,14 @@ function MitigationCreateForm({
 
 function MitigationEditor({
   compact = false,
+  canDeactivate,
   disabled,
   endpoint,
   entity,
   owners,
 }: {
   compact?: boolean;
+  canDeactivate: boolean;
   disabled: boolean;
   endpoint: string;
   entity: MitigationPlanSummary | MitigationActionSummary;
@@ -218,8 +225,13 @@ function MitigationEditor({
 }) {
   const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
+  const [confirmDeactivate, setConfirmDeactivate] = useState(false);
+  const [isDeactivating, setIsDeactivating] = useState(false);
+  const editorOwners = owners.some(({ id }) => id === entity.responsible.id)
+    ? owners
+    : [entity.responsible, ...owners];
   const {
-    formState: { isSubmitting },
+    formState: { errors, isSubmitting },
     handleSubmit,
     register,
   } = useForm<
@@ -243,32 +255,84 @@ function MitigationEditor({
     if (result.ok) router.refresh();
   };
 
+  const deactivate = async () => {
+    setIsDeactivating(true);
+    const result = await send(`${endpoint}/deactivate`, "POST");
+    setMessage(result.message);
+    setIsDeactivating(false);
+    setConfirmDeactivate(false);
+    if (result.ok) router.refresh();
+  };
+
   return (
-    <form
-      className={`grid gap-3 ${compact ? "md:grid-cols-6" : "md:grid-cols-5"}`}
-      onSubmit={handleSubmit(submit)}
-    >
-      <input className="form-input" disabled={disabled} {...register("description")} />
-      <select className="form-input" disabled={disabled} {...register("responsibleId")}>
-        {owners.map((owner) => (
-          <option key={owner.id} value={owner.id}>{owner.name}</option>
-        ))}
-      </select>
-      <input type="date" className="form-input" disabled={disabled} {...register("dueDate")} />
-      <input type="number" min="0" max="100" step="0.01" className="form-input" disabled={disabled} {...register("progress")} />
-      <select className="form-input" disabled={disabled} {...register("status")}>
-        {mitigationStatuses.map((status) => (
-          <option key={status} value={status}>{mitigationStatusLabels[status]}</option>
-        ))}
-      </select>
-      {!disabled && (
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting && <LoaderCircle className="size-4 animate-spin" />}
-          Guardar
-        </Button>
-      )}
-      {message && <p className="text-sm md:col-span-full">{message}</p>}
-    </form>
+    <>
+      <form
+        className={`grid gap-3 ${compact ? "md:grid-cols-6" : "md:grid-cols-5"}`}
+        onSubmit={handleSubmit(submit)}
+      >
+        <Field label="Descripción" error={errors.description?.message}>
+          <input className="form-input" disabled={disabled} {...register("description")} />
+        </Field>
+        <Field label="Responsable" error={errors.responsibleId?.message}>
+          <select className="form-input" disabled={disabled} {...register("responsibleId")}>
+            {editorOwners.map((owner) => (
+              <option key={owner.id} value={owner.id}>{owner.name}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Fecha límite" error={errors.dueDate?.message}>
+          <input type="date" className="form-input" disabled={disabled} {...register("dueDate")} />
+        </Field>
+        <Field label="Avance (%)" error={errors.progress?.message}>
+          <input type="number" min="0" max="100" step="0.01" className="form-input" disabled={disabled} {...register("progress")} />
+        </Field>
+        <Field label="Estado" error={errors.status?.message}>
+          <select className="form-input" disabled={disabled} {...register("status")}>
+            {mitigationStatuses.map((status) => (
+              <option key={status} value={status}>{mitigationStatusLabels[status]}</option>
+            ))}
+          </select>
+        </Field>
+        <div className="flex flex-wrap items-end gap-2">
+          {!disabled && (
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />}
+              Guardar
+            </Button>
+          )}
+          {canDeactivate && entity.status === "activo" && (
+            <Button variant="danger" onClick={() => setConfirmDeactivate(true)}>
+              Retirar
+            </Button>
+          )}
+        </div>
+        {message && (
+          <p aria-live="polite" className="text-sm md:col-span-full">
+            {message}
+          </p>
+        )}
+      </form>
+      <Dialog
+        open={confirmDeactivate}
+        onClose={() => setConfirmDeactivate(false)}
+        title={compact ? "Retirar acción" : "Retirar plan"}
+        description="El elemento quedará cancelado y dejará de considerarse activo."
+      >
+        <div className="flex justify-end gap-2">
+          <Button
+            variant="secondary"
+            disabled={isDeactivating}
+            onClick={() => setConfirmDeactivate(false)}
+          >
+            Cancelar
+          </Button>
+          <Button variant="danger" disabled={isDeactivating} onClick={deactivate}>
+            {isDeactivating && <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />}
+            Confirmar retiro
+          </Button>
+        </div>
+      </Dialog>
+    </>
   );
 }
 
@@ -306,12 +370,12 @@ function EvidenceSection({
   );
 }
 
-async function send(url: string, method: "PATCH" | "POST", body: unknown) {
+async function send(url: string, method: "PATCH" | "POST", body?: unknown) {
   try {
     const response = await fetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: body === undefined ? undefined : JSON.stringify(body),
     });
     const payload =
       (await response.json()) as ApiResponse<MitigationPlanSummary[]>;

@@ -62,6 +62,7 @@ export default async function AlertsPage({ searchParams }: AlertsPageProps) {
         <select
           name="status"
           defaultValue={query.status ?? ""}
+          aria-label="Filtrar alertas por estado"
           className="form-input"
         >
           <option value="">Todos los estados</option>
@@ -73,6 +74,7 @@ export default async function AlertsPage({ searchParams }: AlertsPageProps) {
         <select
           name="severity"
           defaultValue={query.severity ?? ""}
+          aria-label="Filtrar alertas por severidad"
           className="form-input"
         >
           <option value="">Cualquier severidad</option>

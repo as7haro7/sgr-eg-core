@@ -65,7 +65,7 @@ export const navigationItems: readonly NavigationItem[] = [
     module: "cumplimiento",
   },
   {
-    label: "Usuarios",
+    label: "Usuarios y roles",
     href: "/users",
     icon: "users",
     module: "usuarios",

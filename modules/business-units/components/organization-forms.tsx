@@ -24,6 +24,7 @@ import type { ApiResponse } from "@/types/api-response";
 
 interface OrganizationFormsProps {
   countries: CountrySummary[];
+  section: "countries" | "units";
 }
 
 type Feedback = {
@@ -33,6 +34,7 @@ type Feedback = {
 
 export function OrganizationForms({
   countries,
+  section,
 }: OrganizationFormsProps) {
   const [activeDialog, setActiveDialog] = useState<
     "country" | "unit" | null
@@ -44,25 +46,25 @@ export function OrganizationForms({
 
   return (
     <>
-      <div className="flex flex-wrap gap-3 border-b border-slate-200 bg-slate-50 p-4">
+      {section === "countries" ? (
         <Button onClick={() => setActiveDialog("country")}>
           <Flag aria-hidden="true" className="size-4" />
           Nuevo país
         </Button>
+      ) : (
         <Button
-          variant="secondary"
           onClick={() => setActiveDialog("unit")}
           disabled={activeCountries.length === 0}
         >
           <Building2 aria-hidden="true" className="size-4" />
           Nueva unidad
         </Button>
-        {activeCountries.length === 0 && (
-          <p className="self-center text-sm text-amber-800">
+      )}
+        {section === "units" && activeCountries.length === 0 && (
+          <p className="max-w-xs text-sm text-amber-800">
             Crea primero un país activo para registrar unidades.
           </p>
         )}
-      </div>
       <Dialog
         open={activeDialog === "country"}
         onClose={close}

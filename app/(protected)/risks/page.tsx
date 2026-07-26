@@ -122,15 +122,26 @@ export default async function RisksPage({ searchParams }: RisksPageProps) {
             name="search"
             defaultValue={query.search}
             placeholder="Código, título o descripción"
+            aria-label="Buscar riesgos"
             className="form-input lg:col-span-2"
           />
-          <select name="status" defaultValue={query.status ?? ""} className="form-input">
+          <select
+            name="status"
+            defaultValue={query.status ?? ""}
+            aria-label="Filtrar riesgos por estado"
+            className="form-input"
+          >
             <option value="">Todos los estados</option>
             {riskStatuses.map((status) => (
               <option key={status} value={status}>{riskStatusLabels[status]}</option>
             ))}
           </select>
-          <select name="categoryId" defaultValue={query.categoryId ?? ""} className="form-input">
+          <select
+            name="categoryId"
+            defaultValue={query.categoryId ?? ""}
+            aria-label="Filtrar riesgos por categoría"
+            className="form-input"
+          >
             <option value="">Todas las categorías</option>
             {categories.map((category) => (
               <option key={category.id} value={category.id}>{category.name}</option>

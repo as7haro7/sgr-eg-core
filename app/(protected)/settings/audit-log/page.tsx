@@ -70,6 +70,7 @@ export default async function AuditLogPage({ searchParams }: AuditLogPageProps) 
           <select
             name="action"
             defaultValue={query.action ?? ""}
+            aria-label="Filtrar bitácora por acción"
             className="form-input"
           >
             <option value="">Todas las acciones</option>
@@ -89,6 +90,7 @@ export default async function AuditLogPage({ searchParams }: AuditLogPageProps) 
           <select
             name="entity"
             defaultValue={query.entity ?? ""}
+            aria-label="Filtrar bitácora por entidad"
             className="form-input"
           >
             <option value="">Cualquier entidad</option>

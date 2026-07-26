@@ -43,11 +43,15 @@ function Navigation({
   collapsed?: boolean;
   unreadAlertsCount?: number;
 }) {
+  const activeHref = items
+    .filter((item) => isCurrentPath(pathname, item.href))
+    .sort((left, right) => right.href.length - left.href.length)[0]?.href;
+
   return (
     <nav aria-label="Navegación principal" className="flex-1 px-3 py-5">
       <ul className="space-y-1">
         {items.map((item) => {
-          const active = isCurrentPath(pathname, item.href);
+          const active = activeHref === item.href;
           const Icon = navigationIcons[item.icon];
 
           return (
@@ -94,6 +98,7 @@ export function AppShell({
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
   const mobileCloseButtonRef = useRef<HTMLButtonElement>(null);
+  const mobilePanelRef = useRef<HTMLElement>(null);
   const mobileWasOpen = useRef(false);
 
   useEffect(() => {
@@ -109,12 +114,33 @@ export function AppShell({
   useEffect(() => {
     if (!mobileOpen) return;
 
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMobileOpen(false);
+    document.body.style.overflow = "hidden";
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMobileOpen(false);
+        return;
+      }
+      if (event.key !== "Tab" || !mobilePanelRef.current) return;
+      const focusable = mobilePanelRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
 
-    document.addEventListener("keydown", closeOnEscape);
-    return () => document.removeEventListener("keydown", closeOnEscape);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = "";
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, [mobileOpen]);
 
   useEffect(() => {
@@ -208,6 +234,7 @@ export function AppShell({
             onClick={() => setMobileOpen(false)}
           />
           <aside
+            ref={mobilePanelRef}
             className="relative flex h-full w-[min(20rem,88vw)] flex-col bg-white shadow-xl"
             role="dialog"
             aria-modal="true"

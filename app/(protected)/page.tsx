@@ -117,48 +117,63 @@ export default async function Home({ searchParams }: HomePageProps) {
           method="get"
           className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
         >
-          <select name="countryId" defaultValue={first(raw.countryId) ?? ""}>
-            <option value="">Todos los países</option>
-            {countries.map((country) => (
-              <option key={country.id} value={country.id}>
-                {country.name}
-              </option>
-            ))}
-          </select>
-          <select name="unitId" defaultValue={first(raw.unitId) ?? ""}>
-            <option value="">Todas las unidades permitidas</option>
-            {units.map((unit) => (
-              <option key={unit.id} value={unit.id}>
-                {unit.name}
-              </option>
-            ))}
-          </select>
-          <select name="categoryId" defaultValue={first(raw.categoryId) ?? ""}>
-            <option value="">Todas las categorías</option>
-            {categories
-              .filter(({ status }) => status === "activo")
-              .map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
+          <label className="grid gap-1 text-sm text-slate-700">
+            País
+            <select name="countryId" defaultValue={first(raw.countryId) ?? ""}>
+              <option value="">Todos los países</option>
+              {countries.map((country) => (
+                <option key={country.id} value={country.id}>
+                  {country.name}
                 </option>
               ))}
-          </select>
-          <select name="ownerId" defaultValue={first(raw.ownerId) ?? ""}>
-            <option value="">Todos los responsables</option>
-            {owners.map((owner) => (
-              <option key={owner.id} value={owner.id}>
-                {owner.name}
-              </option>
-            ))}
-          </select>
-          <select name="status" defaultValue={first(raw.status) ?? ""}>
-            <option value="">Todos los estados</option>
-            {riskStatuses.map((status) => (
-              <option key={status} value={status}>
-                {riskStatusLabels[status]}
-              </option>
-            ))}
-          </select>
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm text-slate-700">
+            Unidad de negocio
+            <select name="unitId" defaultValue={first(raw.unitId) ?? ""}>
+              <option value="">Todas las unidades permitidas</option>
+              {units.map((unit) => (
+                <option key={unit.id} value={unit.id}>
+                  {unit.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm text-slate-700">
+            Categoría
+            <select name="categoryId" defaultValue={first(raw.categoryId) ?? ""}>
+              <option value="">Todas las categorías</option>
+              {categories
+                .filter(({ status }) => status === "activo")
+                .map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm text-slate-700">
+            Responsable
+            <select name="ownerId" defaultValue={first(raw.ownerId) ?? ""}>
+              <option value="">Todos los responsables</option>
+              {owners.map((owner) => (
+                <option key={owner.id} value={owner.id}>
+                  {owner.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm text-slate-700">
+            Estado
+            <select name="status" defaultValue={first(raw.status) ?? ""}>
+              <option value="">Todos los estados</option>
+              {riskStatuses.map((status) => (
+                <option key={status} value={status}>
+                  {riskStatusLabels[status]}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className="grid gap-1 text-sm text-slate-700">
             Desde
             <input

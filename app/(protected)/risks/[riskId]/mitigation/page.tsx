@@ -154,6 +154,7 @@ export default async function RiskMitigationPage({ params }: PageProps) {
               owners={owners}
               canCreate={canCreate}
               canUpdate={canUpdate}
+              canDeactivate={canDeactivate}
               evidenceByEntityId={evidenceByEntityId}
               maxEvidenceFileSize={maxEvidenceFileSize}
               storageConfigured={isEvidenceStorageConfigured()}

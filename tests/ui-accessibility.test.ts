@@ -28,4 +28,30 @@ describe("Protecciones básicas de accesibilidad", () => {
     expect(evidence).toContain('id={`${fieldPrefix}-name`}');
     expect(evidence).toContain('id={`${fieldPrefix}-url`}');
   });
+
+  it("la navegación móvil conserva el foco y sólo marca una ruta activa", () => {
+    const shell = read("components/layout/app-shell.tsx");
+    expect(shell).toContain('event.key === "Escape"');
+    expect(shell).toContain('event.key !== "Tab"');
+    expect(shell).toContain(".sort((left, right) => right.href.length");
+  });
+
+  it("los filtros principales tienen nombres accesibles", () => {
+    const filters = [
+      read("app/(protected)/page.tsx"),
+      read("app/(protected)/risks/page.tsx"),
+      read("app/(protected)/alerts/page.tsx"),
+      read("app/(protected)/settings/audit-log/page.tsx"),
+    ].join("\n");
+    expect(filters).toContain("Filtrar riesgos por estado");
+    expect(filters).toContain("Filtrar alertas por severidad");
+    expect(filters).toContain("Filtrar bitácora por entidad");
+    expect(filters).toContain("Unidad de negocio");
+  });
+
+  it("respeta la preferencia de movimiento reducido", () => {
+    expect(read("app/globals.css")).toContain(
+      "@media (prefers-reduced-motion: reduce)",
+    );
+  });
 });

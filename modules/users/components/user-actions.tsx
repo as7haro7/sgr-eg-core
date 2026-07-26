@@ -102,24 +102,26 @@ export function UserActions({
 
   return (
     <>
-      <div className="flex items-center justify-end gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
         {canUpdate && (
           <>
             <button
               type="button"
               onClick={() => setDialog("edit")}
               aria-label={`Editar a ${user.name}`}
-              className="rounded p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
             >
               <Edit2 aria-hidden="true" className="size-4" />
+              <span className="hidden xl:inline">Editar</span>
             </button>
             <button
               type="button"
               onClick={() => setDialog("password")}
               aria-label={`Restablecer contraseña de ${user.name}`}
-              className="rounded p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
             >
               <KeyRound aria-hidden="true" className="size-4" />
+              <span className="hidden xl:inline">Clave</span>
             </button>
           </>
         )}
@@ -128,7 +130,7 @@ export function UserActions({
             type="button"
             onClick={() => setDialog("deactivate")}
             aria-label={`Desactivar a ${user.name}`}
-            className="rounded p-2 text-red-600 hover:bg-red-50 hover:text-red-800"
+            className="inline-flex size-10 items-center justify-center rounded-lg border border-red-100 text-red-600 hover:bg-red-50 hover:text-red-800"
           >
             <Ban aria-hidden="true" className="size-4" />
           </button>

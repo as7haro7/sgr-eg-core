@@ -1,12 +1,13 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Gauge, Layers3, LoaderCircle, SlidersHorizontal } from "lucide-react";
+import { Gauge, Layers3, LoaderCircle, Plus, SlidersHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import type { BusinessUnitSummary } from "@/modules/business-units/types/business-unit.types";
 import type {
   RiskAppetiteSummary,
@@ -43,17 +44,39 @@ export function RiskConfigurationForms({
   section,
   units,
 }: RiskConfigurationFormsProps) {
+  const [open, setOpen] = useState(false);
+  const title =
+    section === "categories"
+      ? "Nueva categoría"
+      : section === "appetites"
+        ? "Nueva vigencia de apetito"
+        : "Nuevo parámetro";
+
   return (
-    <div className="border-b border-slate-200 bg-slate-50">
-      {section === "categories" && <CategoryForm />}
-      {section === "appetites" && (
-        <AppetiteForm
-          categories={categories.filter(({ status }) => status === "activo")}
-          units={units.filter(({ status }) => status === "activo")}
-        />
-      )}
-      {section === "parameters" && <ParameterForm />}
-    </div>
+    <>
+      <div className="flex justify-end border-b border-slate-200 bg-white p-4">
+        <Button onClick={() => setOpen(true)}>
+          <Plus aria-hidden="true" className="size-4" />
+          {title}
+        </Button>
+      </div>
+      <Dialog
+        open={open}
+        onClose={() => setOpen(false)}
+        title={title}
+        description="Completa los campos y revisa la información antes de guardar."
+        width="lg"
+      >
+        {section === "categories" && <CategoryForm />}
+        {section === "appetites" && (
+          <AppetiteForm
+            categories={categories.filter(({ status }) => status === "activo")}
+            units={units.filter(({ status }) => status === "activo")}
+          />
+        )}
+        {section === "parameters" && <ParameterForm />}
+      </Dialog>
+    </>
   );
 }
 
@@ -92,7 +115,7 @@ function CategoryForm() {
   };
 
   return (
-    <form className="space-y-4 p-6" onSubmit={handleSubmit(onSubmit)}>
+    <form className="space-y-4 bg-white p-6" onSubmit={handleSubmit(onSubmit)}>
       <FormTitle icon={<Layers3 className="size-4" />} title="Nueva categoría" />
       <Field id="category-name" label="Nombre" error={errors.name?.message}>
         <input id="category-name" className="form-input" {...register("name")} />
@@ -172,7 +195,7 @@ function AppetiteForm({
   };
 
   return (
-    <form className="space-y-4 p-6" onSubmit={handleSubmit(onSubmit)}>
+    <form className="space-y-4 bg-white p-6" onSubmit={handleSubmit(onSubmit)}>
       <FormTitle icon={<Gauge className="size-4" />} title="Nueva vigencia de apetito" />
       <Field id="appetite-category" label="Categoría" error={errors.categoryId?.message}>
         <select id="appetite-category" className="form-input" {...register("categoryId")}>
@@ -243,7 +266,7 @@ function ParameterForm() {
   };
 
   return (
-    <form className="space-y-4 p-6" onSubmit={handleSubmit(onSubmit)}>
+    <form className="space-y-4 bg-white p-6" onSubmit={handleSubmit(onSubmit)}>
       <FormTitle icon={<SlidersHorizontal className="size-4" />} title="Nuevo parámetro" />
       <Field id="parameter-key" label="Clave" error={errors.key?.message}>
         <input id="parameter-key" className="form-input" {...register("key")} />
