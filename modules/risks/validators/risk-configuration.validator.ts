@@ -33,6 +33,7 @@ export const updateRiskCategorySchema = z
   .object({
     name: z.string().trim().min(1, "El nombre es obligatorio.").max(100),
     description: optionalDescriptionSchema,
+    baseAppetite: appetiteThresholdSchema,
   })
   .partial()
   .refine(

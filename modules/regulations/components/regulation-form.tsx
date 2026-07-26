@@ -11,16 +11,20 @@ import { FormField } from "@/components/ui/form-field";
 import type { CountrySummary } from "@/modules/business-units/types/business-unit.types";
 import type { RegulationSummary } from "@/modules/regulations/types/regulation.types";
 import {
-  createRegulationSchema,
-  type CreateRegulationFormInput,
-  type CreateRegulationInput,
+  regulationFormSchema,
+  type RegulationFormInput,
+  type RegulationFormOutput,
 } from "@/modules/regulations/validators/regulation.validator";
 import type { ApiResponse } from "@/types/api-response";
 
 export function RegulationForm({
   countries,
+  regulation,
+  onSuccess,
 }: {
   countries: CountrySummary[];
+  regulation?: RegulationSummary;
+  onSuccess?: () => void;
 }) {
   const router = useRouter();
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -28,33 +32,42 @@ export function RegulationForm({
     formState: { errors, isSubmitting },
     handleSubmit,
     register,
-  } = useForm<CreateRegulationFormInput, unknown, CreateRegulationInput>({
-    resolver: zodResolver(createRegulationSchema),
+  } = useForm<RegulationFormInput, unknown, RegulationFormOutput>({
+    resolver: zodResolver(regulationFormSchema),
     mode: "onChange",
     defaultValues: {
-      name: "",
-      jurisdiction: "",
-      countryId: "",
-      version: "1.0",
-      validFrom: "",
-      validUntil: "",
+      name: regulation?.name ?? "",
+      jurisdiction: regulation?.jurisdiction ?? "",
+      countryId: regulation?.countryId ?? "",
+      version: regulation?.version ?? "1.0",
+      validFrom: regulation ? toDateInput(regulation.validFrom) : "",
+      validUntil: regulation?.validUntil ? toDateInput(regulation.validUntil) : "",
+      ...(regulation ? { status: regulation.status } : {}),
     },
   });
 
-  const submit = async (input: CreateRegulationInput) => {
+  const submit = async (input: RegulationFormOutput) => {
     setFeedback(null);
     try {
-      const response = await fetch("/api/regulations", {
-        method: "POST",
+      const response = await fetch(
+        regulation ? `/api/regulations/${regulation.id}` : "/api/regulations",
+        {
+        method: regulation ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
-      });
+        },
+      );
       const payload = (await response.json()) as ApiResponse<RegulationSummary>;
       if (!response.ok || !payload.data) {
         setFeedback(payload.message);
         return;
       }
-      router.push(`/compliance/regulations/${payload.data.id}`);
+      if (regulation) {
+        setFeedback(null);
+        onSuccess?.();
+      } else {
+        router.push(`/compliance/regulations/${payload.data.id}`);
+      }
       router.refresh();
     } catch {
       setFeedback("No fue posible conectar con el servidor.");
@@ -74,6 +87,18 @@ export function RegulationForm({
       >
         <input className="form-input" {...register("name")} />
       </FormField>
+      {regulation && (
+        <FormField
+          id="regulation-status"
+          label="Estado"
+          error={errors.status?.message}
+        >
+          <select className="form-input" {...register("status")}>
+            <option value="vigente">Vigente</option>
+            <option value="derogada">Derogada</option>
+          </select>
+        </FormField>
+      )}
       <FormField
         id="regulation-jurisdiction"
         label="Jurisdicción"
@@ -143,9 +168,13 @@ export function RegulationForm({
           ) : (
             <BookPlus aria-hidden="true" className="size-4" />
           )}
-          Guardar normativa
+          {regulation ? "Guardar cambios" : "Guardar normativa"}
         </Button>
       </div>
     </form>
   );
+}
+
+function toDateInput(date: Date | string): string {
+  return new Date(date).toISOString().slice(0, 10);
 }

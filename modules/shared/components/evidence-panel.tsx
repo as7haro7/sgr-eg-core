@@ -50,6 +50,7 @@ export function EvidencePanel({
   storageConfigured,
 }: EvidencePanelProps) {
   const router = useRouter();
+  const fieldPrefix = `evidence-${entityType}-${entityId}`;
   const [feedback, setFeedback] = useState<{
     type: "error" | "success";
     message: string;
@@ -122,18 +123,23 @@ export function EvidencePanel({
             noValidate
           >
             <FormField
-              id="evidence-link-name"
+              id={`${fieldPrefix}-name`}
               label="Nombre del enlace"
               error={errors.name?.message}
             >
-              <input className="form-input" {...register("name")} />
+              <input
+                id={`${fieldPrefix}-name`}
+                className="form-input"
+                {...register("name")}
+              />
             </FormField>
             <FormField
-              id="evidence-link-url"
+              id={`${fieldPrefix}-url`}
               label="Dirección del enlace"
               error={errors.referenceUrl?.message}
             >
               <input
+                id={`${fieldPrefix}-url`}
                 type="url"
                 className="form-input"
                 {...register("referenceUrl")}

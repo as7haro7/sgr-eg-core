@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { SectionTabs } from "@/components/ui/section-tabs";
+import { isEvidenceStorageConfigured } from "@/config/env";
 import { notFoundOnMissing } from "@/lib/page-error";
 import { AuthorizationService } from "@/modules/auth/services/authorization.service";
 import { getApplicationPrincipal } from "@/modules/auth/services/current-principal.service";
@@ -13,6 +14,7 @@ import { MitigationPanel } from "@/modules/mitigation/components/mitigation-pane
 import { MitigationService } from "@/modules/mitigation/services/mitigation.service";
 import { RiskService } from "@/modules/risks/services/risk.service";
 import { riskIdSchema } from "@/modules/risks/validators/risk.validator";
+import { EvidenceService } from "@/modules/shared/services/evidence.service";
 
 export const metadata: Metadata = {
   title: "Controles y mitigación | SGR-EG",
@@ -23,6 +25,7 @@ const authorizationService = new AuthorizationService();
 const controlService = new ControlService();
 const mitigationService = new MitigationService();
 const riskService = new RiskService();
+const evidenceService = new EvidenceService();
 
 interface PageProps {
   params: Promise<{ riskId: string }>;
@@ -63,6 +66,18 @@ export default async function RiskMitigationPage({ params }: PageProps) {
   const [overview, plans] = await Promise.all([
     controlService.getOverview(riskId, principal),
     mitigationService.listByRisk(riskId, principal),
+  ]);
+  const [evidenceByEntityId, maxEvidenceFileSize] = await Promise.all([
+    evidenceService.listRiskTreatment(
+      riskId,
+      {
+        controlIds: overview.controls.map(({ id }) => id),
+        planIds: plans.map(({ id }) => id),
+        actionIds: plans.flatMap(({ actions }) => actions.map(({ id }) => id)),
+      },
+      principal,
+    ),
+    evidenceService.getMaxFileSize(),
   ]);
   const needsOwners = canCreate || canUpdate;
   const hasGlobalAccess = principal.permissions.some(
@@ -126,6 +141,9 @@ export default async function RiskMitigationPage({ params }: PageProps) {
               canCreate={canCreate}
               canUpdate={canUpdate}
               canDeactivate={canDeactivate}
+              evidenceByControlId={evidenceByEntityId}
+              maxEvidenceFileSize={maxEvidenceFileSize}
+              storageConfigured={isEvidenceStorageConfigured()}
             />
           </div>
           <div className="border-t border-slate-200 pt-8 dark:border-slate-800">
@@ -136,6 +154,9 @@ export default async function RiskMitigationPage({ params }: PageProps) {
               owners={owners}
               canCreate={canCreate}
               canUpdate={canUpdate}
+              evidenceByEntityId={evidenceByEntityId}
+              maxEvidenceFileSize={maxEvidenceFileSize}
+              storageConfigured={isEvidenceStorageConfigured()}
             />
           </div>
         </div>

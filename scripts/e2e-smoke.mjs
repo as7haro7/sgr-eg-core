@@ -1,13 +1,39 @@
 const baseUrl = process.env.BASE_URL ?? "http://127.0.0.1:3000";
+const performanceBudgetMs = Number(process.env.PERFORMANCE_BUDGET_MS ?? 3000);
+const authPerformanceBudgetMs = Number(
+  process.env.AUTH_PERFORMANCE_BUDGET_MS ?? 5000,
+);
 
-const login = await fetch(`${baseUrl}/api/auth/login`, {
-  method: "POST",
-  headers: { "content-type": "application/json" },
-  body: JSON.stringify({
-    correo: "admin.sgr@gmail.com",
-    password: "DemoSGR2026!",
-  }),
-});
+async function timedFetch(url, options, budgetMs = performanceBudgetMs) {
+  const startedAt = performance.now();
+  const response = await fetch(url, options);
+  const duration = performance.now() - startedAt;
+  if (duration > budgetMs) {
+    throw new Error(
+      `${url} tardó ${Math.round(duration)} ms; el máximo es ${budgetMs} ms.`,
+    );
+  }
+  return response;
+}
+
+// Calienta el proceso y el pool de base de datos antes de medir uso estable.
+const warmup = await fetch(`${baseUrl}/api/auth/session`);
+if (warmup.status !== 401) {
+  throw new Error(`La verificación inicial devolvió ${warmup.status}, se esperaba 401.`);
+}
+
+const login = await timedFetch(
+  `${baseUrl}/api/auth/login`,
+  {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      correo: "admin.sgr@gmail.com",
+      password: "DemoSGR2026!",
+    }),
+  },
+  authPerformanceBudgetMs,
+);
 if (!login.ok) {
   throw new Error(`Login E2E falló con ${login.status}: ${await login.text()}`);
 }
@@ -15,7 +41,7 @@ const setCookie = login.headers.get("set-cookie");
 const cookie = setCookie?.split(";")[0];
 if (!cookie) throw new Error("Login E2E no devolvió cookie de sesión.");
 
-const session = await fetch(`${baseUrl}/api/auth/session`, {
+const session = await timedFetch(`${baseUrl}/api/auth/session`, {
   headers: { cookie },
 });
 if (!session.ok) {
@@ -23,7 +49,7 @@ if (!session.ok) {
 }
 
 async function expectStatus(path, expected = 200) {
-  const response = await fetch(`${baseUrl}${path}`, {
+  const response = await timedFetch(`${baseUrl}${path}`, {
     headers: { cookie },
     redirect: "manual",
   });
@@ -79,16 +105,21 @@ for (const [endpoint, detailPath] of [
   const response = await expectStatus(endpoint);
   const payload = await response.json();
   const item = payload.data?.items?.[0];
-  if (item?.id) await expectStatus(`${detailPath}${item.id}`);
+  if (item?.id) {
+    await expectStatus(`${detailPath}${item.id}`);
+    if (endpoint.startsWith("/api/risks")) {
+      await expectStatus(`/risks/${item.id}/mitigation`);
+    }
+  }
 }
 
-const logout = await fetch(`${baseUrl}/api/auth/logout`, {
+const logout = await timedFetch(`${baseUrl}/api/auth/logout`, {
   method: "POST",
   headers: { cookie },
 });
 if (!logout.ok) throw new Error(`Logout E2E falló con ${logout.status}.`);
 
-const revoked = await fetch(`${baseUrl}/api/auth/session`, {
+const revoked = await timedFetch(`${baseUrl}/api/auth/session`, {
   headers: { cookie },
 });
 if (revoked.status !== 401) {

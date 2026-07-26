@@ -16,6 +16,7 @@
     "db:seed": "node --env-file-if-exists=.env --experimental-strip-types scripts/seed.ts",
     "db:backup": "node --env-file-if-exists=.env --experimental-strip-types scripts/backup-database.ts",
     "db:restore": "node --env-file-if-exists=.env --experimental-strip-types scripts/restore-database.ts",
+    "system:check": "node --env-file-if-exists=.env --experimental-strip-types scripts/check-readiness.ts",
     "postinstall": "prisma generate",
     "bootstrap:admin": "node --env-file-if-exists=.env --experimental-strip-types scripts/bootstrap-admin.ts"
   },

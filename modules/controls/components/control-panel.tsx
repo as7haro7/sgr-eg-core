@@ -23,6 +23,8 @@ import {
   type CreateControlInput,
 } from "@/modules/controls/validators/control.validator";
 import type { ApiResponse } from "@/types/api-response";
+import { EvidencePanel } from "@/modules/shared/components/evidence-panel";
+import type { EvidenceSummary } from "@/modules/shared/types/evidence.types";
 
 interface ControlPanelProps {
   riskId: string;
@@ -30,14 +32,20 @@ interface ControlPanelProps {
   canCreate: boolean;
   canUpdate: boolean;
   canDeactivate: boolean;
+  evidenceByControlId: Record<string, EvidenceSummary[]>;
+  maxEvidenceFileSize: number;
+  storageConfigured: boolean;
 }
 
 export function ControlPanel({
   canCreate,
   canDeactivate,
   canUpdate,
+  evidenceByControlId,
+  maxEvidenceFileSize,
   overview,
   riskId,
+  storageConfigured,
 }: ControlPanelProps) {
   return (
     <section className="space-y-6">
@@ -69,6 +77,9 @@ export function ControlPanel({
             control={control}
             canUpdate={canUpdate}
             canDeactivate={canDeactivate}
+            evidence={evidenceByControlId[control.id] ?? []}
+            maxEvidenceFileSize={maxEvidenceFileSize}
+            storageConfigured={storageConfigured}
           />
         ))}
       </div>
@@ -149,10 +160,16 @@ function ControlCard({
   canDeactivate,
   canUpdate,
   control,
+  evidence,
+  maxEvidenceFileSize,
+  storageConfigured,
 }: {
   canDeactivate: boolean;
   canUpdate: boolean;
   control: ControlSummary;
+  evidence: EvidenceSummary[];
+  maxEvidenceFileSize: number;
+  storageConfigured: boolean;
 }) {
   const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
@@ -239,6 +256,21 @@ function ControlCard({
           {history.length === 0 && <li>Sin cambios relevantes.</li>}
         </ul>
       )}
+      <details className="mt-4 border-t border-slate-200 pt-4 dark:border-slate-800">
+        <summary className="cursor-pointer text-sm font-semibold">
+          Evidencias ({evidence.length})
+        </summary>
+        <div className="mt-4">
+          <EvidencePanel
+            entityType="control"
+            entityId={control.id}
+            evidence={evidence}
+            canCreate={canUpdate}
+            maxFileSizeBytes={maxEvidenceFileSize}
+            storageConfigured={storageConfigured}
+          />
+        </div>
+      </details>
     </article>
   );
 }

@@ -134,6 +134,7 @@ export class RiskConfigurationService {
         const updated = await repository.updateCategory(categoryId, {
           nombre: input.name,
           descripcion: input.description,
+          apetito_base: input.baseAppetite,
         });
         await repository.recordAudit({
           usuario_id: actorId,

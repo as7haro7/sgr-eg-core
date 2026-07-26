@@ -25,6 +25,8 @@ import {
 } from "@/modules/mitigation/validators/mitigation.validator";
 import type { RiskOwnerOption } from "@/modules/risks/types/risk.types";
 import type { ApiResponse } from "@/types/api-response";
+import { EvidencePanel } from "@/modules/shared/components/evidence-panel";
+import type { EvidenceSummary } from "@/modules/shared/types/evidence.types";
 
 interface MitigationPanelProps {
   riskId: string;
@@ -32,14 +34,20 @@ interface MitigationPanelProps {
   owners: RiskOwnerOption[];
   canCreate: boolean;
   canUpdate: boolean;
+  evidenceByEntityId: Record<string, EvidenceSummary[]>;
+  maxEvidenceFileSize: number;
+  storageConfigured: boolean;
 }
 
 export function MitigationPanel({
   canCreate,
   canUpdate,
+  evidenceByEntityId,
+  maxEvidenceFileSize,
   owners,
   plans,
   riskId,
+  storageConfigured,
 }: MitigationPanelProps) {
   return (
     <section className="space-y-6">
@@ -63,20 +71,37 @@ export function MitigationPanel({
               owners={owners}
               disabled={!canUpdate}
             />
+            <EvidenceSection
+              entityType="plan"
+              entityId={plan.id}
+              evidence={evidenceByEntityId[plan.id] ?? []}
+              canCreate={canUpdate}
+              maxFileSizeBytes={maxEvidenceFileSize}
+              storageConfigured={storageConfigured}
+            />
             <div className="mt-5 border-t border-slate-200 pt-4 dark:border-slate-800">
               <h4 className="mb-3 text-sm font-bold uppercase text-slate-500">
                 Acciones
               </h4>
               <div className="space-y-3">
                 {plan.actions.map((action) => (
-                  <MitigationEditor
-                    key={action.id}
-                    endpoint={`/api/mitigation-actions/${action.id}`}
-                    entity={action}
-                    owners={owners}
-                    disabled={!canUpdate}
-                    compact
-                  />
+                  <div key={action.id} className="rounded-lg border p-3 dark:border-slate-800">
+                    <MitigationEditor
+                      endpoint={`/api/mitigation-actions/${action.id}`}
+                      entity={action}
+                      owners={owners}
+                      disabled={!canUpdate}
+                      compact
+                    />
+                    <EvidenceSection
+                      entityType="action"
+                      entityId={action.id}
+                      evidence={evidenceByEntityId[action.id] ?? []}
+                      canCreate={canUpdate}
+                      maxFileSizeBytes={maxEvidenceFileSize}
+                      storageConfigured={storageConfigured}
+                    />
+                  </div>
                 ))}
               </div>
               {canCreate && (
@@ -220,7 +245,7 @@ function MitigationEditor({
 
   return (
     <form
-      className={`grid gap-3 ${compact ? "rounded-lg border p-3 md:grid-cols-6 dark:border-slate-800" : "md:grid-cols-5"}`}
+      className={`grid gap-3 ${compact ? "md:grid-cols-6" : "md:grid-cols-5"}`}
       onSubmit={handleSubmit(submit)}
     >
       <input className="form-input" disabled={disabled} {...register("description")} />
@@ -244,6 +269,40 @@ function MitigationEditor({
       )}
       {message && <p className="text-sm md:col-span-full">{message}</p>}
     </form>
+  );
+}
+
+function EvidenceSection({
+  canCreate,
+  entityId,
+  entityType,
+  evidence,
+  maxFileSizeBytes,
+  storageConfigured,
+}: {
+  canCreate: boolean;
+  entityId: string;
+  entityType: "plan" | "action";
+  evidence: EvidenceSummary[];
+  maxFileSizeBytes: number;
+  storageConfigured: boolean;
+}) {
+  return (
+    <details className="mt-4 border-t border-slate-200 pt-4 dark:border-slate-800">
+      <summary className="cursor-pointer text-sm font-semibold">
+        Evidencias ({evidence.length})
+      </summary>
+      <div className="mt-4">
+        <EvidencePanel
+          entityType={entityType}
+          entityId={entityId}
+          evidence={evidence}
+          canCreate={canCreate}
+          maxFileSizeBytes={maxFileSizeBytes}
+          storageConfigured={storageConfigured}
+        />
+      </div>
+    </details>
   );
 }
 

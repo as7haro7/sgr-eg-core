@@ -66,6 +66,10 @@ export const updateRegulationSchema = z
     "Debe indicar al menos un cambio.",
   );
 
+export const regulationFormSchema = createRegulationSchema.safeExtend({
+  status: z.enum(["vigente", "derogada"]).optional(),
+});
+
 export const listRegulationsQuerySchema = z.object({
   page: queryPageSchema,
   pageSize: queryPageSizeSchema,
@@ -121,6 +125,8 @@ export const requirementIdSchema = z.string().uuid("El requisito no es válido."
 
 export type CreateRegulationInput = z.output<typeof createRegulationSchema>;
 export type CreateRegulationFormInput = z.input<typeof createRegulationSchema>;
+export type RegulationFormInput = z.input<typeof regulationFormSchema>;
+export type RegulationFormOutput = z.output<typeof regulationFormSchema>;
 export type UpdateRegulationInput = z.output<typeof updateRegulationSchema>;
 export type ListRegulationsQuery = z.output<typeof listRegulationsQuerySchema>;
 export type CreateRequirementInput = z.output<typeof createRequirementSchema>;

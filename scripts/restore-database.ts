@@ -23,6 +23,21 @@ if (
 if (!existsSync(source)) {
   throw new Error("El archivo de respaldo no existe.");
 }
+const verification = spawnSync("pg_restore", ["--list", source], {
+  stdio: "inherit",
+});
+if (verification.status !== 0) {
+  if (
+    verification.error &&
+    "code" in verification.error &&
+    verification.error.code === "ENOENT"
+  ) {
+    throw new Error(
+      "pg_restore no está instalado o no está disponible en PATH. Instala las herramientas cliente de PostgreSQL 16.",
+    );
+  }
+  throw new Error("El archivo no es un respaldo PostgreSQL válido.");
+}
 const result = spawnSync(
   "pg_restore",
   ["--exit-on-error", "--no-owner", "--dbname", connectionUrl, source],

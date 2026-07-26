@@ -67,7 +67,19 @@ npm run typecheck
 npm test
 npm run test:coverage
 npm run build
+npm run system:check
 ```
+
+Las pruebas E2E aplican por defecto un presupuesto de 3000 ms por respuesta;
+puede ajustarse con `PERFORMANCE_BUDGET_MS` para diagnósticos controlados. El
+inicio de sesión, que deriva la clave y registra una sesión auditada, usa un
+límite independiente de 5000 ms configurable con
+`AUTH_PERFORMANCE_BUDGET_MS`.
+
+`npm run system:check` comprueba la conexión PostgreSQL, autenticación,
+Storage privado, SMTP y disponibilidad de `pg_dump`/`pg_restore` sin mostrar
+credenciales. Debe finalizar sin elementos `FALTA` antes de una puesta en
+operación integral.
 
 La suite `tests/cp-requirements.test.ts` cubre las reglas mínimas CP-01 a
 CP-10. `tests/database.integration.test.ts` valida restricciones, triggers e

@@ -67,6 +67,43 @@ export class EvidenceRepository {
     });
   }
 
+  listRiskTreatment(
+    riskId: string,
+    targetIds: {
+      controlIds: string[];
+      planIds: string[];
+      actionIds: string[];
+    },
+  ) {
+    return this.database.evidencias.findMany({
+      where: {
+        deleted_at: null,
+        OR: [
+          {
+            control_id: { in: targetIds.controlIds },
+            controles: { riesgo_id: riskId, deleted_at: null },
+          },
+          {
+            plan_id: { in: targetIds.planIds },
+            planes_mitigacion: { riesgo_id: riskId, deleted_at: null },
+          },
+          {
+            accion_id: { in: targetIds.actionIds },
+            acciones_mitigacion: {
+              deleted_at: null,
+              planes_mitigacion: {
+                riesgo_id: riskId,
+                deleted_at: null,
+              },
+            },
+          },
+        ],
+      },
+      select: evidenceSelect,
+      orderBy: [{ created_at: "desc" }, { id: "desc" }],
+    });
+  }
+
   create(data: Prisma.evidenciasUncheckedCreateInput) {
     return this.database.evidencias.create({
       data,

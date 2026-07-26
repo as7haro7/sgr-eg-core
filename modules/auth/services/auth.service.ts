@@ -34,9 +34,12 @@ export class AuthService {
     input: LoginInput,
     context: AuthRequestContext = {},
   ): Promise<AuthSession> {
-    const user = await this.repository.findUserByEmail(input.correo);
+    const [credentials, sessionParameter] = await Promise.all([
+      this.repository.findUserCredentialsByEmail(input.correo),
+      this.repository.getSessionDurationParameter(),
+    ]);
 
-    if (!user) {
+    if (!credentials) {
       await this.passwordHasher.hash(input.password);
       await this.recordFailedLogin(null, context);
       throw invalidCredentialsError();
@@ -44,18 +47,16 @@ export class AuthService {
 
     const passwordIsValid = await this.passwordHasher.verify(
       input.password,
-      user.password_hash,
+      credentials.password_hash,
     );
     const userIsActive =
-      user.estado === "activo" && user.deleted_at === null;
+      credentials.estado === "activo" && credentials.deleted_at === null;
 
     if (!passwordIsValid || !userIsActive) {
-      await this.recordFailedLogin(user.id, context);
+      await this.recordFailedLogin(credentials.id, context);
       throw invalidCredentialsError();
     }
 
-    const sessionParameter =
-      await this.repository.getSessionDurationParameter();
     const issuedAt = new Date();
     const expiresAt = getSessionExpiration(
       sessionParameter?.valor,
@@ -63,50 +64,26 @@ export class AuthService {
     );
     const sessionId = randomUUID();
     const token = this.tokenService.create(
-      user.id,
+      credentials.id,
       sessionId,
       issuedAt,
       expiresAt,
     );
     const tokenHash = this.tokenService.hash(token);
 
-    await withAuditContext(user.id, async (transaction) => {
-      const transactionRepository = new AuthRepository(transaction);
-      const currentUser = await transactionRepository.findUserStatusById(
-        user.id,
-      );
-
-      if (
-        !currentUser ||
-        currentUser.estado !== "activo" ||
-        currentUser.deleted_at !== null
-      ) {
-        throw invalidCredentialsError();
-      }
-
-      await transactionRepository.createSession({
-        id: sessionId,
-        usuario_id: user.id,
-        token_hash: tokenHash,
-        estado: "activa",
-        emitida_at: issuedAt,
-        expira_at: expiresAt,
+    const [user, completed] = await Promise.all([
+      this.repository.findUserById(credentials.id),
+      this.repository.completeSuccessfulLogin({
+        userId: credentials.id,
+        sessionId,
+        tokenHash,
+        issuedAt,
+        expiresAt,
         ip: context.ip,
-        user_agent: context.userAgent,
-      });
-      await transactionRepository.updateLastLogin(user.id, issuedAt);
-      await transactionRepository.recordAudit({
-        usuario_id: user.id,
-        accion: "login",
-        entidad: "sesiones",
-        entidad_id: sessionId,
-        resultado: "exitoso",
-        detalles: {
-          evento: "inicio_sesion",
-        },
-        ip: context.ip,
-      });
-    });
+        userAgent: context.userAgent,
+      }),
+    ]);
+    if (!completed || !user) throw invalidCredentialsError();
 
     return {
       token,

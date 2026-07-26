@@ -33,6 +33,16 @@ export default async function OrganizationPage() {
     "organizacion",
     "create",
   );
+  const canUpdate = authorizationService.isAllowed(
+    principal,
+    "organizacion",
+    "update",
+  );
+  const canDeactivate = authorizationService.isAllowed(
+    principal,
+    "organizacion",
+    "deactivate",
+  );
   const [countries, units] = await Promise.all([
     countryService.list(),
     businessUnitService.list(),
@@ -76,7 +86,11 @@ export default async function OrganizationPage() {
               secondary: country.isoCode,
               status: country.status,
               type: "country" as const,
+              isoCode: country.isoCode,
             }))}
+            countries={countries}
+            canUpdate={canUpdate}
+            canDeactivate={canDeactivate}
           />
           <CatalogList
             title="Unidades de negocio"
@@ -87,7 +101,12 @@ export default async function OrganizationPage() {
               secondary: `${unit.country.name} · ${unit.currency}`,
               status: unit.status,
               type: "unit" as const,
+              countryId: unit.country.id,
+              currency: unit.currency,
             }))}
+            countries={countries}
+            canUpdate={canUpdate}
+            canDeactivate={canDeactivate}
           />
         </div>
       </section>
@@ -99,6 +118,9 @@ function CatalogList({
   emptyMessage,
   items,
   title,
+  countries,
+  canUpdate,
+  canDeactivate,
 }: {
   emptyMessage: string;
   items: Array<{
@@ -107,7 +129,13 @@ function CatalogList({
     secondary: string;
     status: "activo" | "inactivo";
     type: "country" | "unit";
+    isoCode?: string;
+    countryId?: string;
+    currency?: string;
   }>;
+  countries: Awaited<ReturnType<CountryService["list"]>>;
+  canUpdate: boolean;
+  canDeactivate: boolean;
   title: string;
 }) {
   return (
@@ -143,6 +171,12 @@ function CatalogList({
                   type={item.type}
                   status={item.status}
                   currentName={item.primary}
+                  currentIsoCode={item.isoCode}
+                  currentCountryId={item.countryId}
+                  currentCurrency={item.currency}
+                  countries={countries}
+                  canUpdate={canUpdate}
+                  canDeactivate={canDeactivate}
                 />
               </div>
             </li>

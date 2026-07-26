@@ -179,6 +179,42 @@ export class EvidenceService {
     return evidence.map(mapEvidence);
   }
 
+  async listRiskTreatment(
+    riskId: string,
+    targetIds: {
+      controlIds: string[];
+      planIds: string[];
+      actionIds: string[];
+    },
+    principal: AuthPrincipal,
+  ): Promise<Record<string, EvidenceSummary[]>> {
+    const parent = await this.resolveParent({
+      entityType: "risk",
+      entityId: riskId,
+    });
+    this.authorization.assertAllowed(
+      principal,
+      "mitigacion",
+      "read",
+      parent.context,
+    );
+    const records = await this.repository.listRiskTreatment(riskId, targetIds);
+    const result = Object.fromEntries(
+      [
+        ...targetIds.controlIds,
+        ...targetIds.planIds,
+        ...targetIds.actionIds,
+      ].map((id) => [id, [] as EvidenceSummary[]]),
+    );
+
+    for (const record of records) {
+      const targetId = record.control_id ?? record.plan_id ?? record.accion_id;
+      if (targetId) result[targetId]?.push(mapEvidence(record));
+    }
+
+    return result;
+  }
+
   async createLink(
     input: CreateLinkEvidenceInput,
     principal: AuthPrincipal,

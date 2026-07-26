@@ -9,6 +9,9 @@ import { getApplicationPrincipal } from "@/modules/auth/services/current-princip
 import { RegulationService } from "@/modules/regulations/services/regulation.service";
 import { RequirementList } from "@/modules/regulations/components/requirement-list";
 import { regulationIdSchema } from "@/modules/regulations/validators/regulation.validator";
+import { AuthorizationService } from "@/modules/auth/services/authorization.service";
+import { CountryService } from "@/modules/business-units/services/country.service";
+import { RegulationEditor } from "@/modules/regulations/components/regulation-editor";
 
 export const metadata: Metadata = {
   title: "Detalle de Normativa | SGR-EG",
@@ -16,6 +19,8 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 const regulationService = new RegulationService();
+const authorizationService = new AuthorizationService();
+const countryService = new CountryService();
 
 interface RegulationDetailPageProps {
   params: Promise<{ regulationId: string }>;
@@ -35,19 +40,18 @@ export default async function RegulationDetailPage({
     const regulation = await notFoundOnMissing(
       regulationService.getRegulationById(regulationId, principal),
     );
-    const requirementsResult = await regulationService.listRequirements(
-      regulationId,
-      { page: 1, pageSize: 500, active: undefined }, 
-      principal
-    );
+    const [requirementsResult, countries] = await Promise.all([
+      regulationService.listRequirements(
+        regulationId,
+        { page: 1, pageSize: 500, active: undefined },
+        principal,
+      ),
+      countryService.list(),
+    ]);
     const requirements = requirementsResult.items;
 
-    const canUpdate = principal.permissions.some(
-      ({ module, canUpdate }) => module === "cumplimiento" && canUpdate,
-    );
-    const canCreate = principal.permissions.some(
-      ({ module, canCreate }) => module === "cumplimiento" && canCreate,
-    );
+    const canUpdate = authorizationService.isAllowed(principal, "cumplimiento", "update");
+    const canCreate = authorizationService.isAllowed(principal, "cumplimiento", "create");
 
     return (
       <div className="space-y-6">
@@ -74,9 +78,12 @@ export default async function RegulationDetailPage({
                 Jurisdicción: {regulation.jurisdiction || "General"}
               </p>
             </div>
-            <StatusBadge tone={regulation.status === "vigente" ? "success" : "neutral"}>
-              {regulation.status}
-            </StatusBadge>
+            <div className="flex flex-wrap items-center gap-3">
+              {canUpdate && <RegulationEditor regulation={regulation} countries={countries} />}
+              <StatusBadge tone={regulation.status === "vigente" ? "success" : "neutral"}>
+                {regulation.status}
+              </StatusBadge>
+            </div>
           </div>
 
           <dl className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

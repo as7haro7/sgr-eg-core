@@ -39,19 +39,33 @@ paths:
         "200": { $ref: "#/components/responses/Success" }
         "400": { $ref: "#/components/responses/Error" }
         "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /auth/logout:
     post:
       tags: [Autenticación]
       summary: Revocar la sesión actual
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /auth/change-password:
     post:
       tags: [Autenticación]
       summary: Cambiar contraseña propia
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "200": { $ref: "#/components/responses/Success" }
         "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /auth/session:
     get:
       tags: [Autenticación]
@@ -59,27 +73,47 @@ paths:
       responses:
         "200": { $ref: "#/components/responses/Success" }
         "401": { $ref: "#/components/responses/Error" }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
   /users:
     get:
       tags: [Usuarios]
       summary: Listar usuarios
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
     post:
       tags: [Usuarios]
       summary: Crear usuario
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "201": { $ref: "#/components/responses/Success" }
         "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /users/{userId}:
     patch:
       tags: [Usuarios]
       summary: Actualizar usuario, roles y unidades
       parameters:
         - $ref: "#/components/parameters/UserId"
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "200": { $ref: "#/components/responses/Success" }
         "403": { $ref: "#/components/responses/Error" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /users/{userId}/deactivate:
     post:
       tags: [Usuarios]
@@ -88,33 +122,66 @@ paths:
         - $ref: "#/components/parameters/UserId"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /users/{userId}/reset-password:
     post:
       tags: [Usuarios]
       summary: Restablecer contraseña y exigir cambio posterior
       parameters:
         - $ref: "#/components/parameters/UserId"
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /roles:
     get:
       tags: [Usuarios]
       summary: Listar roles activos y sus permisos
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
     post:
       tags: [Usuarios]
       summary: Crear rol y matriz de permisos
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "201": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /roles/{roleId}:
     patch:
       tags: [Usuarios]
       summary: Actualizar rol y permisos
       parameters:
         - $ref: "#/components/parameters/RoleId"
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /roles/{roleId}/deactivate:
     post:
       tags: [Usuarios]
@@ -123,25 +190,50 @@ paths:
         - $ref: "#/components/parameters/RoleId"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /countries:
     get:
       tags: [Configuración]
       summary: Listar países
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
     post:
       tags: [Configuración]
       summary: Crear país
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "201": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /countries/{countryId}:
     patch:
       tags: [Configuración]
       summary: Actualizar país
       parameters:
         - $ref: "#/components/parameters/CountryId"
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /countries/{countryId}/deactivate:
     post:
       tags: [Configuración]
@@ -150,25 +242,50 @@ paths:
         - $ref: "#/components/parameters/CountryId"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /business-units:
     get:
       tags: [Configuración]
       summary: Listar unidades de negocio
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
     post:
       tags: [Configuración]
       summary: Crear unidad de negocio
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "201": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /business-units/{unitId}:
     patch:
       tags: [Configuración]
       summary: Actualizar unidad de negocio
       parameters:
         - $ref: "#/components/parameters/UnitId"
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /business-units/{unitId}/deactivate:
     post:
       tags: [Configuración]
@@ -177,25 +294,50 @@ paths:
         - $ref: "#/components/parameters/UnitId"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /risk-categories:
     get:
       tags: [Configuración]
       summary: Listar categorías de riesgo
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
     post:
       tags: [Configuración]
       summary: Crear categoría de riesgo
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "201": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /risk-categories/{categoryId}:
     patch:
       tags: [Configuración]
       summary: Actualizar categoría de riesgo
       parameters:
         - $ref: "#/components/parameters/CategoryId"
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /risk-categories/{categoryId}/deactivate:
     post:
       tags: [Configuración]
@@ -204,53 +346,107 @@ paths:
         - $ref: "#/components/parameters/CategoryId"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /risk-appetites:
     get:
       tags: [Configuración]
       summary: Consultar historial de apetitos
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
     post:
       tags: [Configuración]
       summary: Configurar apetito con unidad y vigencia opcionales
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "201": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /system-parameters:
     get:
       tags: [Configuración]
       summary: Listar parámetros tipados
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
     post:
       tags: [Configuración]
       summary: Crear parámetro tipado
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "201": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /system-parameters/{key}:
     patch:
       tags: [Configuración]
       summary: Actualizar parámetro tipado
       parameters:
         - { in: path, name: key, required: true, schema: { type: string } }
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /risks:
     get:
       tags: [Riesgos]
       summary: Consultar riesgos con alcance y filtros
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
     post:
       tags: [Riesgos]
       summary: Registrar riesgo
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "201": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /risks/preview:
     post:
       tags: [Riesgos]
       summary: Calcular inherente, residual, criticidad y apetito en backend
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /risks/{riskId}:
     get:
       tags: [Riesgos]
@@ -259,22 +455,42 @@ paths:
         - $ref: "#/components/parameters/RiskId"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
     patch:
       tags: [Riesgos]
       summary: Editar riesgo
       parameters:
         - $ref: "#/components/parameters/RiskId"
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /risks/{riskId}/transition:
     post:
       tags: [Riesgos]
       summary: Ejecutar transición de estado válida
       parameters:
         - $ref: "#/components/parameters/RiskId"
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "200": { $ref: "#/components/responses/Success" }
         "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /risks/{riskId}/controls:
     get:
       tags: [Riesgos]
@@ -283,13 +499,26 @@ paths:
         - $ref: "#/components/parameters/RiskId"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
     post:
       tags: [Riesgos]
       summary: Crear control
       parameters:
         - $ref: "#/components/parameters/RiskId"
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "201": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /risks/{riskId}/mitigation-plans:
     get:
       tags: [Riesgos]
@@ -298,21 +527,42 @@ paths:
         - $ref: "#/components/parameters/RiskId"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
     post:
       tags: [Riesgos]
       summary: Crear plan de mitigación
       parameters:
         - $ref: "#/components/parameters/RiskId"
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "201": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /controls/{controlId}:
     patch:
       tags: [Controles]
       summary: Actualizar control y registrar historial
       parameters:
         - $ref: "#/components/parameters/ControlId"
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /controls/{controlId}/history:
     get:
       tags: [Controles]
@@ -321,6 +571,11 @@ paths:
         - $ref: "#/components/parameters/ControlId"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
   /controls/{controlId}/deactivate:
     post:
       tags: [Controles]
@@ -329,22 +584,44 @@ paths:
         - $ref: "#/components/parameters/ControlId"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /mitigation-plans/{planId}:
     patch:
       tags: [Mitigación]
       summary: Actualizar plan de mitigación
       parameters:
         - $ref: "#/components/parameters/PlanId"
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /mitigation-plans/{planId}/actions:
     post:
       tags: [Mitigación]
       summary: Crear acción de mitigación
       parameters:
         - $ref: "#/components/parameters/PlanId"
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "201": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /mitigation-plans/{planId}/deactivate:
     post:
       tags: [Mitigación]
@@ -353,14 +630,28 @@ paths:
         - $ref: "#/components/parameters/PlanId"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /mitigation-actions/{actionId}:
     patch:
       tags: [Mitigación]
       summary: Actualizar acción y avance
       parameters:
         - $ref: "#/components/parameters/ActionId"
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /mitigation-actions/{actionId}/deactivate:
     post:
       tags: [Mitigación]
@@ -369,17 +660,34 @@ paths:
         - $ref: "#/components/parameters/ActionId"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /audits:
     get:
       tags: [Auditorías]
       summary: Listar auditorías
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
     post:
       tags: [Auditorías]
       summary: Planificar auditoría con equipo
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "201": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /audits/{auditId}:
     get:
       tags: [Auditorías]
@@ -388,14 +696,27 @@ paths:
         - $ref: "#/components/parameters/AuditId"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
   /audits/{auditId}/transition:
     post:
       tags: [Auditorías]
       summary: Cambiar estado de la auditoría
       parameters:
         - $ref: "#/components/parameters/AuditId"
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /audits/{auditId}/findings:
     get:
       tags: [Auditorías]
@@ -404,13 +725,26 @@ paths:
         - $ref: "#/components/parameters/AuditId"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
     post:
       tags: [Auditorías]
       summary: Registrar hallazgo
       parameters:
         - $ref: "#/components/parameters/AuditId"
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "201": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /findings/{findingId}:
     get:
       tags: [Auditorías]
@@ -419,40 +753,80 @@ paths:
         - $ref: "#/components/parameters/FindingId"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
     put:
       tags: [Auditorías]
       summary: Actualizar hallazgo
       parameters:
         - $ref: "#/components/parameters/FindingId"
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /findings/{findingId}/response:
     post:
       tags: [Auditorías]
       summary: Registrar respuesta y responsable
       parameters:
         - $ref: "#/components/parameters/FindingId"
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /findings/{findingId}/close:
     post:
       tags: [Auditorías]
       summary: Cerrar hallazgo validando evidencia
       parameters:
         - $ref: "#/components/parameters/FindingId"
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /regulations:
     get:
       tags: [Cumplimiento]
       summary: Listar normativas
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
     post:
       tags: [Cumplimiento]
       summary: Crear normativa
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "201": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /regulations/{regulationId}:
     get:
       tags: [Cumplimiento]
@@ -461,13 +835,26 @@ paths:
         - $ref: "#/components/parameters/RegulationId"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
     put:
       tags: [Cumplimiento]
       summary: Actualizar normativa
       parameters:
         - $ref: "#/components/parameters/RegulationId"
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /regulations/{regulationId}/requirements:
     get:
       tags: [Cumplimiento]
@@ -476,13 +863,26 @@ paths:
         - $ref: "#/components/parameters/RegulationId"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
     post:
       tags: [Cumplimiento]
       summary: Crear requisito o nueva versión
       parameters:
         - $ref: "#/components/parameters/RegulationId"
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "201": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /regulations/{regulationId}/requirements/{requirementId}:
     get:
       tags: [Cumplimiento]
@@ -492,27 +892,50 @@ paths:
         - $ref: "#/components/parameters/RequirementId"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
     put:
       tags: [Cumplimiento]
       summary: Actualizar metadatos o crear una nueva versión
       parameters:
         - $ref: "#/components/parameters/RegulationId"
         - $ref: "#/components/parameters/RequirementId"
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "200": { $ref: "#/components/responses/Success" }
         "201": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /compliance/evaluations:
     get:
       tags: [Cumplimiento]
       summary: Listar evaluaciones periódicas
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
     post:
       tags: [Cumplimiento]
       summary: Crear evaluación única por requisito, unidad y periodo
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "201": { $ref: "#/components/responses/Success" }
         "409": { $ref: "#/components/responses/Error" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
   /compliance/evaluations/{evaluationId}:
     get:
       tags: [Cumplimiento]
@@ -521,45 +944,86 @@ paths:
         - $ref: "#/components/parameters/EvaluationId"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
   /alerts:
     get:
       tags: [Alertas]
       summary: Bandeja de alertas del usuario
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
   /alerts/engine:
     post:
       tags: [Alertas]
       summary: Ejecutar AL-01 a AL-07 manualmente
       responses:
         "201": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /alerts/{alertId}/attend:
     post:
       tags: [Alertas]
       summary: Atender con comentario obligatorio
       parameters:
         - $ref: "#/components/parameters/AlertId"
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /alerts/{alertId}/reopen:
     post:
       tags: [Alertas]
       summary: Reabrir alerta y conservar el evento
       parameters:
         - $ref: "#/components/parameters/AlertId"
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /evidence:
     get:
       tags: [Evidencias]
       summary: Listar evidencia con autorización heredada
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
     post:
       tags: [Evidencias]
       summary: Adjuntar evidencia mediante enlace
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
       responses:
         "201": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /evidence/upload:
     post:
       tags: [Evidencias]
@@ -576,6 +1040,11 @@ paths:
                 entityId: { type: string, format: uuid }
       responses:
         "201": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
   /evidence/{evidenceId}/download:
     get:
       tags: [Evidencias]
@@ -585,6 +1054,11 @@ paths:
       responses:
         "307":
           description: Redirección temporal autorizada
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
   /dashboard/summary:
     get:
       tags: [Reportes]
@@ -599,12 +1073,20 @@ paths:
         - { in: query, name: periodEnd, schema: { type: string, format: date } }
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
   /audit-log:
     get:
       tags: [Reportes]
       summary: Consultar bitácora limitada por alcance
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
 components:
   securitySchemes:
     sessionCookie:
@@ -629,6 +1111,10 @@ components:
     AlertId: { in: path, name: alertId, required: true, schema: { type: string, format: uuid } }
     EvidenceId: { in: path, name: evidenceId, required: true, schema: { type: string, format: uuid } }
   schemas:
+    JsonRequest:
+      type: object
+      minProperties: 1
+      additionalProperties: true
     ApiResponse:
       type: object
       required: [data, message, errors]
@@ -644,6 +1130,14 @@ components:
               code: { type: string }
               message: { type: string }
               field: { type: string }
+  requestBodies:
+    JsonBody:
+      required: true
+      description: Entrada JSON validada por el esquema del dominio.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/JsonRequest"
   responses:
     Success:
       description: Operación correcta

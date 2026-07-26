@@ -17,6 +17,19 @@ const result = spawnSync(
   { stdio: "inherit" },
 );
 if (result.status !== 0) {
+  if (result.error && "code" in result.error && result.error.code === "ENOENT") {
+    throw new Error(
+      "pg_dump no está instalado o no está disponible en PATH. Instala las herramientas cliente de PostgreSQL 16.",
+    );
+  }
   throw new Error("pg_dump no pudo generar el respaldo.");
+}
+const verification = spawnSync("pg_restore", ["--list", target], {
+  stdio: "inherit",
+});
+if (verification.status !== 0) {
+  throw new Error(
+    "El archivo fue generado, pero pg_restore no pudo verificar su catálogo.",
+  );
 }
 process.stdout.write(`Respaldo verificable creado en ${target}\n`);

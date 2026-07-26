@@ -11,6 +11,7 @@ import { CreateUserDialog } from "@/modules/users/components/create-user-dialog"
 import { UserActions } from "@/modules/users/components/user-actions";
 import { UserService } from "@/modules/users/services/user.service";
 import { listUsersQuerySchema } from "@/modules/users/validators/user.validator";
+import { RoleManager } from "@/modules/roles/components/role-manager";
 
 export const metadata: Metadata = {
   title: "Usuarios | SGR-EG",
@@ -58,10 +59,21 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
     "usuarios",
     "create",
   );
+  const canUpdateUsers = authorizationService.isAllowed(
+    principal,
+    "usuarios",
+    "update",
+  );
+  const canDeactivateUsers = authorizationService.isAllowed(
+    principal,
+    "usuarios",
+    "deactivate",
+  );
+  const needsOptions = canCreateUsers || canUpdateUsers;
   const [users, roles, units] = await Promise.all([
     userService.list(query),
-    canCreateUsers ? roleService.listActive() : Promise.resolve([]),
-    canCreateUsers
+    needsOptions ? roleService.listActive() : Promise.resolve([]),
+    needsOptions
       ? businessUnitService.listActive()
       : Promise.resolve([]),
   ]);
@@ -153,13 +165,25 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
                       : "Sin acceso"}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <UserActions userId={user.id} status={user.status} />
+                    <UserActions
+                      user={user}
+                      roles={roles}
+                      units={units}
+                      canUpdate={canUpdateUsers}
+                      canDeactivate={canDeactivateUsers}
+                    />
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        <RoleManager
+          roles={roles}
+          canCreate={canCreateUsers}
+          canUpdate={canUpdateUsers}
+          canDeactivate={canDeactivateUsers}
+        />
       </section>
     </div>
   );

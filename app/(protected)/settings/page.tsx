@@ -60,6 +60,11 @@ export default async function SettingsPage({
     "organizacion",
     "update",
   );
+  const canDeactivate = authorizationService.isAllowed(
+    principal,
+    "organizacion",
+    "deactivate",
+  );
   const canRunAlertEngine = authorizationService.isAllowed(
     principal,
     "alertas",
@@ -157,6 +162,10 @@ export default async function SettingsPage({
                       type="category"
                       status={category.status}
                       currentName={category.name}
+                      currentDescription={category.description}
+                      currentBaseAppetite={category.baseAppetite}
+                      canUpdate={canUpdate}
+                      canDeactivate={canDeactivate}
                     />
                   </div>
                 </li>

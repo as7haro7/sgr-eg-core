@@ -5,7 +5,7 @@ import { authUserSelect } from "@/modules/auth/types/auth.types";
 
 type AuthDatabaseClient = Pick<
   TransactionClient,
-  "bitacora" | "parametros_sistema" | "sesiones" | "usuarios"
+  "$queryRaw" | "bitacora" | "parametros_sistema" | "sesiones" | "usuarios"
 >;
 
 export class AuthRepository {
@@ -14,6 +14,25 @@ export class AuthRepository {
   findUserByEmail(email: string) {
     return this.database.usuarios.findUnique({
       where: { correo: email },
+      select: authUserSelect,
+    });
+  }
+
+  findUserCredentialsByEmail(email: string) {
+    return this.database.usuarios.findUnique({
+      where: { correo: email },
+      select: {
+        id: true,
+        password_hash: true,
+        estado: true,
+        deleted_at: true,
+      },
+    });
+  }
+
+  findUserById(userId: string) {
+    return this.database.usuarios.findUnique({
+      where: { id: userId },
       select: authUserSelect,
     });
   }
@@ -66,6 +85,72 @@ export class AuthRepository {
         expira_at: true,
       },
     });
+  }
+
+  async completeSuccessfulLogin(input: {
+    userId: string;
+    sessionId: string;
+    tokenHash: string;
+    issuedAt: Date;
+    expiresAt: Date;
+    ip?: string;
+    userAgent?: string;
+  }): Promise<boolean> {
+    const rows = await this.database.$queryRaw<Array<{ completed: boolean }>>`
+      WITH audit_context AS (
+        SELECT set_config('app.user_id', ${input.userId}, true)
+      ),
+      active_user AS (
+        SELECT usuarios.id
+          FROM usuarios
+          CROSS JOIN audit_context
+         WHERE usuarios.id = ${input.userId}::uuid
+           AND usuarios.estado = 'activo'
+           AND usuarios.deleted_at IS NULL
+         FOR UPDATE
+      ),
+      created_session AS (
+        INSERT INTO sesiones (
+          id, usuario_id, token_hash, estado, emitida_at, expira_at, ip, user_agent
+        )
+        SELECT
+          ${input.sessionId}::uuid,
+          active_user.id,
+          ${input.tokenHash},
+          'activa',
+          ${input.issuedAt},
+          ${input.expiresAt},
+          CAST(${input.ip ?? null} AS inet),
+          ${input.userAgent ?? null}
+        FROM active_user
+        RETURNING id, usuario_id
+      ),
+      updated_user AS (
+        UPDATE usuarios
+           SET ultimo_login = ${input.issuedAt},
+               updated_at = now()
+         WHERE id IN (SELECT id FROM active_user)
+        RETURNING id
+      ),
+      recorded_event AS (
+        INSERT INTO bitacora (
+          usuario_id, accion, entidad, entidad_id, resultado, detalles, ip
+        )
+        SELECT
+          created_session.usuario_id,
+          'login',
+          'sesiones',
+          created_session.id,
+          'exitoso',
+          '{"evento":"inicio_sesion"}'::jsonb,
+          CAST(${input.ip ?? null} AS inet)
+        FROM created_session
+        RETURNING id
+      )
+      SELECT EXISTS (SELECT 1 FROM recorded_event) AS completed
+    `;
+
+    return rows[0]?.completed ?? false;
   }
 
   revokeSession(tokenHash: string, revokedAt: Date) {
