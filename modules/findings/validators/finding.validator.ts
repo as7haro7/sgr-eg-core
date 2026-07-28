@@ -38,7 +38,16 @@ const findingFieldsSchema = z
   });
 
 export const createFindingSchema = findingFieldsSchema
-  .superRefine(({ requiresClosingEvidence, severity }, context) => {
+  .superRefine(
+    (
+      {
+        deadline,
+        requiresClosingEvidence,
+        responsibleId,
+        severity,
+      },
+      context,
+    ) => {
     if (severity === "critica" && !requiresClosingEvidence) {
       context.addIssue({
         code: "custom",
@@ -46,7 +55,22 @@ export const createFindingSchema = findingFieldsSchema
         path: ["requiresClosingEvidence"],
       });
     }
-  });
+    if (!responsibleId) {
+      context.addIssue({
+        code: "custom",
+        message: "El responsable es obligatorio para el seguimiento.",
+        path: ["responsibleId"],
+      });
+    }
+    if (!deadline) {
+      context.addIssue({
+        code: "custom",
+        message: "La fecha límite es obligatoria para el seguimiento.",
+        path: ["deadline"],
+      });
+    }
+  },
+  );
 
 export const respondFindingSchema = z.object({
   response: z

@@ -1,6 +1,7 @@
 import {
   ArrowLeft,
   ClipboardCheck,
+  Pencil,
   UsersRound,
 } from "lucide-react";
 import type { Metadata } from "next";
@@ -137,6 +138,15 @@ export default async function AuditDetailPage({
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3">
+            {canUpdate && !["cerrada", "cancelada"].includes(audit.status) && (
+              <Link
+                href={`/audits/${audit.id}/edit`}
+                className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-300 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                <Pencil aria-hidden="true" className="size-4" />
+                Editar
+              </Link>
+            )}
             <StatusBadge tone={audit.status === "cerrada" ? "success" : audit.status === "cancelada" ? "danger" : "info"}>
               {auditStatusLabels[audit.status]}
             </StatusBadge>

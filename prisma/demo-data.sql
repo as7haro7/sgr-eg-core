@@ -3,7 +3,7 @@
 -- Requiere haber ejecutado schema_SGR-EG.sql.
 -- Es idempotente por UUID/correo y no modifica registros existentes.
 --
--- Usuarios demo: *@gmail.com
+-- Usuarios demo: *@demo.sgr-eg.local (excepto el administrador)
 -- Contraseña común: DemoSGR2026!
 -- ============================================================================
 
@@ -36,27 +36,27 @@ INSERT INTO usuarios (
   id, nombre, correo, password_hash, estado, debe_cambiar_password
 ) VALUES
   ('20000000-0000-4000-8000-000000000001', 'Ana Torres',
-   'ana.analista@gmail.com',
+   'ana.analista@demo.sgr-eg.local',
    'scrypt$16384$8$1$ABEiM0RVZneImaq7zN3u_w$QZdbDLrSMb1K7xZ7qweISdFNFmLurg_0fKn74jbG5LErfF-eJY89P5VzxHlIRNvMHa1uMvVkcyOgFCFLC6iS9g',
    'activo', false),
   ('20000000-0000-4000-8000-000000000002', 'Carlos Mendoza',
-   'carlos.propietario@gmail.com',
+   'carlos.propietario@demo.sgr-eg.local',
    'scrypt$16384$8$1$ABEiM0RVZneImaq7zN3u_w$QZdbDLrSMb1K7xZ7qweISdFNFmLurg_0fKn74jbG5LErfF-eJY89P5VzxHlIRNvMHa1uMvVkcyOgFCFLC6iS9g',
    'activo', false),
   ('20000000-0000-4000-8000-000000000003', 'María López',
-   'maria.auditora@gmail.com',
+   'maria.auditora@demo.sgr-eg.local',
    'scrypt$16384$8$1$ABEiM0RVZneImaq7zN3u_w$QZdbDLrSMb1K7xZ7qweISdFNFmLurg_0fKn74jbG5LErfF-eJY89P5VzxHlIRNvMHa1uMvVkcyOgFCFLC6iS9g',
    'activo', false),
   ('20000000-0000-4000-8000-000000000004', 'Lucía Fernández',
-   'lucia.cumplimiento@gmail.com',
+   'lucia.cumplimiento@demo.sgr-eg.local',
    'scrypt$16384$8$1$ABEiM0RVZneImaq7zN3u_w$QZdbDLrSMb1K7xZ7qweISdFNFmLurg_0fKn74jbG5LErfF-eJY89P5VzxHlIRNvMHa1uMvVkcyOgFCFLC6iS9g',
    'activo', false),
   ('20000000-0000-4000-8000-000000000005', 'Jorge Salazar',
-   'jorge.gerencia@gmail.com',
+   'jorge.gerencia@demo.sgr-eg.local',
    'scrypt$16384$8$1$ABEiM0RVZneImaq7zN3u_w$QZdbDLrSMb1K7xZ7qweISdFNFmLurg_0fKn74jbG5LErfF-eJY89P5VzxHlIRNvMHa1uMvVkcyOgFCFLC6iS9g',
    'activo', false),
   ('20000000-0000-4000-8000-000000000006', 'Diego Rojas',
-   'diego.tecnico@gmail.com',
+   'diego.tecnico@demo.sgr-eg.local',
    'scrypt$16384$8$1$ABEiM0RVZneImaq7zN3u_w$QZdbDLrSMb1K7xZ7qweISdFNFmLurg_0fKn74jbG5LErfF-eJY89P5VzxHlIRNvMHa1uMvVkcyOgFCFLC6iS9g',
    'activo', false),
   ('20000000-0000-4000-8000-000000000007', 'Administradora Demo',

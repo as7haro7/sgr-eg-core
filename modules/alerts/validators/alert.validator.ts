@@ -15,6 +15,10 @@ export const listAlertsQuerySchema = z.object({
 export const attendAlertSchema = z.object({
   comment: z.string().trim().min(1, "El comentario es obligatorio."),
 });
+export const patchAlertSchema = attendAlertSchema.extend({
+  alertId: z.string().uuid("La alerta no es válida."),
+});
+export type PatchAlertInput = z.output<typeof patchAlertSchema>;
 
 export const alertIdSchema = z.string().uuid("La alerta no es válida.");
 

@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 
 import { Client } from "pg";
+import { postgresTool } from "./postgres-tools.ts";
 
 type Check = {
   name: string;
@@ -13,8 +14,8 @@ const configured = (name: string) => {
   return Boolean(value && !value.includes("YOUR_") && !value.includes("REPLACE_"));
 };
 
-const commandAvailable = (command: string) => {
-  const result = spawnSync(command, ["--version"], {
+const commandAvailable = (command: "pg_dump" | "pg_restore") => {
+  const result = spawnSync(postgresTool(command), ["--version"], {
     encoding: "utf8",
     windowsHide: true,
   });
@@ -48,7 +49,7 @@ const checks: Check[] = [
   {
     name: "Respaldo",
     ok: commandAvailable("pg_dump") && commandAvailable("pg_restore"),
-    detail: "pg_dump y pg_restore disponibles en PATH",
+    detail: "pg_dump y pg_restore disponibles",
   },
 ];
 

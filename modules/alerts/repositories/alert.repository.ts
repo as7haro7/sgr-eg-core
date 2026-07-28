@@ -39,6 +39,34 @@ export const alertSummarySelect = {
   generada_at: true,
   atendida_at: true,
   usuarios: { select: { id: true, nombre: true } },
+  riesgos: { select: { unidad_id: true } },
+  controles: {
+    select: { riesgos: { select: { unidad_id: true } } },
+  },
+  planes_mitigacion: {
+    select: { riesgos: { select: { unidad_id: true } } },
+  },
+  acciones_mitigacion: {
+    select: {
+      planes_mitigacion: {
+        select: { riesgos: { select: { unidad_id: true } } },
+      },
+    },
+  },
+  hallazgos: {
+    select: { auditorias: { select: { unidad_id: true } } },
+  },
+  evaluaciones_cumplimiento: { select: { unidad_id: true } },
+  alerta_historial: {
+    select: {
+      id: true,
+      evento: true,
+      comentario: true,
+      created_at: true,
+      usuarios: { select: { id: true, nombre: true } },
+    },
+    orderBy: [{ created_at: "asc" }, { id: "asc" }],
+  },
 } satisfies Prisma.alertasSelect;
 
 export type AlertSummaryRecord = Prisma.alertasGetPayload<{
@@ -48,21 +76,24 @@ export type AlertSummaryRecord = Prisma.alertasGetPayload<{
 export class AlertRepository {
   constructor(private readonly database: AlertDatabaseClient = prisma) {}
 
-  async list(userId: string, query: ListAlertsQuery) {
+  async list(
+    query: ListAlertsQuery,
+    scopeWhere: Prisma.alertasWhereInput,
+  ) {
     const where: Prisma.alertasWhereInput = {
-      destinatario_id: userId,
       deleted_at: null,
       estado: query.status,
       severidad: query.severity,
+      AND: [scopeWhere],
     };
 
     const [total, unreadCount, items] = await Promise.all([
       this.database.alertas.count({ where }),
       this.database.alertas.count({
         where: {
-          destinatario_id: userId,
           estado: "pendiente",
           deleted_at: null,
+          AND: [scopeWhere],
         },
       }),
       this.database.alertas.findMany({
@@ -170,7 +201,11 @@ export class AlertRepository {
         estado: "activo",
         deleted_at: null,
       },
-      select: { id: true, responsable_id: true },
+      select: {
+        id: true,
+        responsable_id: true,
+        riesgos: { select: { unidad_id: true } },
+      },
     });
   }
 
@@ -181,22 +216,31 @@ export class AlertRepository {
         estado: "activo",
         deleted_at: null,
       },
-      select: { id: true, responsable_id: true },
+      select: {
+        id: true,
+        responsable_id: true,
+        planes_mitigacion: {
+          select: { riesgos: { select: { unidad_id: true } } },
+        },
+      },
     });
   }
 
-  findCriticalFindingsWithoutResponse() {
+  findCriticalFindingsWithoutResponse(date: Date) {
     return this.database.hallazgos.findMany({
       where: {
         severidad: "critica",
         respuesta: null,
+        fecha_limite: { lt: date },
         estado: { not: "cerrado" },
         deleted_at: null,
       },
       select: {
         id: true,
         responsable_id: true,
-        auditorias: { select: { responsable_id: true } },
+        auditorias: {
+          select: { responsable_id: true, unidad_id: true },
+        },
       },
     });
   }
@@ -208,7 +252,11 @@ export class AlertRepository {
         deleted_at: null,
         responsable_plan_id: { not: null },
       },
-      select: { id: true, responsable_plan_id: true },
+      select: {
+        id: true,
+        responsable_plan_id: true,
+        unidad_id: true,
+      },
     });
   }
 
@@ -268,7 +316,13 @@ export class AlertRepository {
       select: {
         id: true,
         efectividad: true,
-        riesgos: { select: { codigo: true, propietario_id: true } },
+        riesgos: {
+          select: {
+            codigo: true,
+            propietario_id: true,
+            unidad_id: true,
+          },
+        },
       },
     });
   }
@@ -290,6 +344,41 @@ export class AlertRepository {
     return this.database.parametros_sistema.findUnique({
       where: { clave: "alerta_dias_vencimiento" },
       select: { valor: true },
+    });
+  }
+
+  findCriticalityRangesParameter() {
+    return this.database.parametros_sistema.findUnique({
+      where: { clave: "criticidad_rangos" },
+      select: { valor: true },
+    });
+  }
+
+  findRecipientsByRoles(roleNames: string[], unitId?: string | null) {
+    return this.database.usuarios.findMany({
+      where: {
+        estado: "activo",
+        deleted_at: null,
+        usuario_roles: {
+          some: {
+            roles: {
+              nombre: { in: roleNames },
+              estado: "activo",
+            },
+          },
+        },
+        ...(unitId
+          ? {
+              usuario_unidades: {
+                some: {
+                  unidad_id: unitId,
+                  unidades_negocio: { estado: "activo" },
+                },
+              },
+            }
+          : {}),
+      },
+      select: { id: true },
     });
   }
 }

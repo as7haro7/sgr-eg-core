@@ -184,10 +184,31 @@ export class RiskService {
     riskId: string,
     principal: AuthPrincipal,
   ): Promise<estado_riesgo[]> {
-    const risk = await this.getAuthorizedRisk(riskId, principal, "update");
+    const risk = await this.getAuthorizedRisk(riskId, principal, "read");
     const transitions = await this.repository.listTransitions(risk.estado);
+    const canUpdate = this.authorization.isAllowed(
+      principal,
+      "riesgos",
+      "update",
+      {
+        unitId: risk.unidad_id,
+        ownerId: risk.creado_por,
+        assigneeIds: risk.propietario_id ? [risk.propietario_id] : [],
+      },
+    );
+    if (canUpdate) {
+      return transitions.map(({ destino }) => destino);
+    }
+    const isManagement = await this.repository.hasActiveRole(
+      principal.userId,
+      "gerencia",
+    );
 
-    return transitions.map(({ destino }) => destino);
+    return isManagement
+      ? transitions
+          .map(({ destino }) => destino)
+          .filter((destination) => destination === "aceptado")
+      : [];
   }
 
   async previewCalculation(
@@ -450,7 +471,7 @@ export class RiskService {
     const existing = await this.getAuthorizedRisk(
       riskId,
       principal,
-      "update",
+      input.destination === "aceptado" ? "read" : "update",
     );
     const transition = await this.repository.findTransition(
       existing.estado,
@@ -475,20 +496,24 @@ export class RiskService {
         400,
       );
     }
-    if (
-      input.destination === "aceptado" &&
-      !principal.permissions.some(
+    if (input.destination === "aceptado") {
+      const hasGlobalUpdate = principal.permissions.some(
         (permission) =>
           permission.module === "riesgos" &&
           permission.canUpdate &&
           permission.scope === "global",
-      )
-    ) {
-      throw new AppError(
-        "FORBIDDEN",
-        "La aceptación requiere un aprobador con alcance global.",
-        403,
       );
+      const isManagement = await this.repository.hasActiveRole(
+        principal.userId,
+        "gerencia",
+      );
+      if (!hasGlobalUpdate && !isManagement) {
+        throw new AppError(
+          "FORBIDDEN",
+          "La aceptación requiere un aprobador de gerencia autorizado.",
+          403,
+        );
+      }
     }
 
     const risk = await withAuditContext(

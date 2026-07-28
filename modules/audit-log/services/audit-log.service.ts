@@ -37,15 +37,33 @@ export class AuditLogService {
     // Solo usuarios con permiso de configuración pueden ver la bitácora
     this.authorization.assertAllowed(principal, "bitacora", "read");
 
-    const hasGlobalScope = principal.permissions.some(
+    const permissions = principal.permissions.filter(
       (permission) =>
-        permission.module === "bitacora" &&
-        permission.canRead &&
-        permission.scope === "global",
+        permission.module === "bitacora" && permission.canRead,
+    );
+    const hasGlobalScope = permissions.some(
+      ({ scope }) => scope === "global",
+    );
+    const hasUnitScope = permissions.some(
+      ({ scope }) => scope === "unidad",
+    );
+    const hasAssignedScope = permissions.some(
+      ({ scope }) => scope === "asignado",
+    );
+    const hasOwnScope = permissions.some(
+      ({ scope }) => scope === "propio",
     );
     const result = await this.repository.list(
       query,
-      hasGlobalScope ? undefined : principal.unitIds,
+      hasGlobalScope
+        ? undefined
+        : {
+            unitIds: hasUnitScope ? principal.unitIds : undefined,
+            assignedUserId: hasAssignedScope
+              ? principal.userId
+              : undefined,
+            ownUserId: hasOwnScope ? principal.userId : undefined,
+          },
     );
 
     return {

@@ -20,15 +20,15 @@ interface DashboardChartsProps {
 }
 
 const RISK_COLORS = {
-  bajo: "#10b981",    // emerald-500
-  medio: "#f59e0b",   // amber-500
-  alto: "#ef4444",    // red-500
-  critico: "#991b1b", // red-800
+  Bajo: "#10b981",
+  Moderado: "#f59e0b",
+  Alto: "#ef4444",
+  Crítico: "#991b1b",
 };
 
 export function DashboardCharts({ summary }: DashboardChartsProps) {
   const pieData = summary.riskDistribution.map((d) => ({
-    name: d.level.charAt(0).toUpperCase() + d.level.slice(1),
+    name: d.level,
     value: d.count,
     color: RISK_COLORS[d.level as keyof typeof RISK_COLORS] || "#cbd5e1",
   }));
@@ -44,9 +44,9 @@ export function DashboardCharts({ summary }: DashboardChartsProps) {
 
   const getCellColor = (p: number, i: number) => {
     const val = p * i;
-    if (val < 5) return "bg-emerald-100 text-emerald-900 border-emerald-200";
-    if (val < 10) return "bg-amber-100 text-amber-900 border-amber-200";
-    if (val < 15) return "bg-orange-100 text-orange-900 border-orange-200";
+    if (val <= summary.criticalityRanges.low[1]) return "bg-emerald-100 text-emerald-900 border-emerald-200";
+    if (val <= summary.criticalityRanges.moderate[1]) return "bg-amber-100 text-amber-900 border-amber-200";
+    if (val <= summary.criticalityRanges.high[1]) return "bg-orange-100 text-orange-900 border-orange-200";
     return "bg-red-100 text-red-900 border-red-200";
   };
 

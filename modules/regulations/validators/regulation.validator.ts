@@ -22,7 +22,8 @@ const dateSchema = z.union([
 const optionalDate = z
   .union([dateSchema, z.literal(""), z.null()])
   .optional()
-  .transform((value) => (value === "" || value === undefined ? null : value));
+  .transform((value) => (value === "" ? null : value));
+const createOptionalDate = optionalDate.transform((value) => value ?? null);
 
 // ── Normativas ───────────────────────────────────────────────────────────────
 
@@ -40,7 +41,7 @@ export const createRegulationSchema = z
       .transform((value) => value || null),
     version: z.string().trim().min(1, "La versión es obligatoria.").max(30),
     validFrom: dateSchema,
-    validUntil: optionalDate,
+    validUntil: createOptionalDate,
   })
   .refine(
     (data) =>
@@ -90,7 +91,7 @@ export const createRequirementSchema = z
       .optional()
       .transform((value) => value || null),
     validFrom: dateSchema,
-    validUntil: optionalDate,
+    validUntil: createOptionalDate,
   })
   .refine(
     (data) =>

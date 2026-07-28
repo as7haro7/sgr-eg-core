@@ -34,4 +34,19 @@ export interface DashboardSummary {
   compliance: ComplianceSummary;
   findings: FindingsSummary;
   activeAlerts: number;
+  risksOverAppetite: number;
+  overdueMitigationItems: number;
+  mitigationProgress: number;
+  averageAlertAttentionHours: number | null;
+  auditCoverage: {
+    auditedUnits: number;
+    plannedUnits: number;
+    percentage: number;
+  };
+  criticalityRanges: {
+    low: readonly [number, number];
+    moderate: readonly [number, number];
+    high: readonly [number, number];
+    critical: readonly [number, number];
+  };
 }

@@ -21,6 +21,7 @@ import type {
 import type {
   CreateEvaluationInput,
   ListEvaluationsQuery,
+  UpdateEvaluationInput,
 } from "@/modules/compliance/validators/evaluation.validator";
 
 function mapRequirement(
@@ -276,6 +277,125 @@ export class EvaluationService {
 
     scheduleAlertEvaluation();
     return mapEvaluation(evaluation);
+  }
+
+  async update(
+    evaluationId: string,
+    input: UpdateEvaluationInput,
+    principal: AuthPrincipal,
+  ): Promise<EvaluationSummary> {
+    const existing = await this.repository.findById(evaluationId);
+    if (!existing) {
+      throw new AppError("NOT_FOUND", "La evaluación no existe.", 404);
+    }
+    this.authorization.assertAllowed(
+      principal,
+      "cumplimiento",
+      "update",
+      {
+        unitId: existing.unidad_id,
+        ownerId: existing.evaluador_id,
+        assigneeIds: [
+          existing.evaluador_id,
+          ...(existing.responsable_plan_id
+            ? [existing.responsable_plan_id]
+            : []),
+        ],
+      },
+    );
+    this.authorization.assertAllowed(
+      principal,
+      "cumplimiento",
+      "update",
+      {
+        unitId: input.unitId,
+        ownerId: existing.evaluador_id,
+        assigneeIds: [
+          existing.evaluador_id,
+          ...(input.planResponsibleId
+            ? [input.planResponsibleId]
+            : []),
+        ],
+      },
+    );
+
+    const [requirement, unit, planResponsible, duplicate] =
+      await Promise.all([
+        this.repository.findActiveRequirement(input.requirementId),
+        this.repository.findActiveUnit(input.unitId),
+        input.result === "no_conforme" && input.planResponsibleId
+          ? this.repository.findActiveUser(input.planResponsibleId)
+          : Promise.resolve({ id: "" }),
+        this.repository.findDuplicate(
+          input.requirementId,
+          input.unitId,
+          input.periodStart,
+          input.periodEnd,
+          evaluationId,
+        ),
+      ]);
+    if (!requirement) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "El requisito no existe o no está vigente.",
+        400,
+      );
+    }
+    if (!unit) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "La unidad no existe o está inactiva.",
+        400,
+      );
+    }
+    if (
+      input.result === "no_conforme" &&
+      input.planResponsibleId &&
+      !planResponsible
+    ) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "El responsable del plan no existe o está inactivo.",
+        400,
+      );
+    }
+    if (duplicate) {
+      throw new AppError(
+        "CONFLICT",
+        "Ya existe una evaluación para el mismo requisito, unidad y periodo.",
+        409,
+      );
+    }
+
+    const updated = await withAuditContext(
+      principal.userId,
+      (transaction) =>
+        new EvaluationRepository(transaction).update(evaluationId, {
+          requisito_id: input.requirementId,
+          unidad_id: input.unitId,
+          periodo_inicio: input.periodStart,
+          periodo_fin: input.periodEnd,
+          resultado: input.result,
+          observaciones: input.observations,
+          justificacion_no_aplicable:
+            input.result === "no_aplicable"
+              ? input.notApplicableJustification
+              : null,
+          plan_accion:
+            input.result === "no_conforme" ? input.actionPlan : null,
+          responsable_plan_id:
+            input.result === "no_conforme"
+              ? input.planResponsibleId
+              : null,
+          fecha_limite_plan:
+            input.result === "no_conforme"
+              ? input.planDeadline
+              : null,
+        }),
+    );
+
+    scheduleAlertEvaluation();
+    return mapEvaluation(updated);
   }
 
   async listRequirementOptions(

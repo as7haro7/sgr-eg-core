@@ -75,9 +75,10 @@ export default async function RiskDetailPage({
     ),
     evidenceService.getMaxFileSize(),
   ]);
-  const transitions = canUpdate
-    ? await riskService.listAvailableTransitions(riskId, principal)
-    : [];
+  const transitions = await riskService.listAvailableTransitions(
+    riskId,
+    principal,
+  );
 
   return (
     <div className="w-full">
@@ -104,7 +105,6 @@ export default async function RiskDetailPage({
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {canUpdate && (
-                <>
                   <Link
                     href={`/risks/${risk.id}/edit`}
                     className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
@@ -112,13 +112,12 @@ export default async function RiskDetailPage({
                     <PencilLine aria-hidden="true" className="size-4" />
                     Editar
                   </Link>
-                  {transitions.length > 0 && (
-                    <RiskTransitionDialog
-                      riskId={risk.id}
-                      transitions={transitions}
-                    />
-                  )}
-                </>
+              )}
+              {transitions.length > 0 && (
+                <RiskTransitionDialog
+                  riskId={risk.id}
+                  transitions={transitions}
+                />
               )}
               <span className="rounded-full bg-slate-100 px-3 py-1.5 text-sm font-semibold dark:bg-slate-800">
                 {riskStatusLabels[risk.status]}

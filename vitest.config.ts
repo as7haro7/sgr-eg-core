@@ -36,6 +36,14 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
+      include: [
+        "app/api/**/*.ts",
+        "config/**/*.ts",
+        "lib/**/*.ts",
+        "modules/**/*.ts",
+        "types/**/*.ts",
+      ],
+      exclude: ["**/*.d.ts", "**/node_modules/**", "generated/**"],
     },
   },
 });

@@ -26,12 +26,14 @@ import {
 import type { ApiResponse } from "@/types/api-response";
 
 interface EvaluationFormProps {
+  evaluation?: EvaluationSummary;
   requirements: RequirementOption[];
   units: EvaluationUnitOption[];
   users: ComplianceParty[];
 }
 
 export function EvaluationForm({
+  evaluation,
   requirements,
   units,
   users,
@@ -51,16 +53,19 @@ export function EvaluationForm({
     resolver: zodResolver(createEvaluationSchema),
     mode: "onChange",
     defaultValues: {
-      requirementId: requirements[0]?.id ?? "",
-      unitId: units[0]?.id ?? "",
-      periodStart: "",
-      periodEnd: "",
-      result: "conforme",
-      observations: "",
-      notApplicableJustification: "",
-      actionPlan: "",
-      planResponsibleId: "",
-      planDeadline: "",
+      requirementId: evaluation?.requirement.id ?? requirements[0]?.id ?? "",
+      unitId: evaluation?.unit.id ?? units[0]?.id ?? "",
+      periodStart: evaluation ? toDateInput(evaluation.periodStart) : "",
+      periodEnd: evaluation ? toDateInput(evaluation.periodEnd) : "",
+      result: evaluation?.result ?? "conforme",
+      observations: evaluation?.observations ?? "",
+      notApplicableJustification:
+        evaluation?.notApplicableJustification ?? "",
+      actionPlan: evaluation?.actionPlan ?? "",
+      planResponsibleId: evaluation?.planResponsible?.id ?? "",
+      planDeadline: evaluation?.planDeadline
+        ? toDateInput(evaluation.planDeadline)
+        : "",
     },
   });
   const result = watch("result");
@@ -69,11 +74,16 @@ export function EvaluationForm({
     setFeedback(null);
 
     try {
-      const response = await fetch("/api/compliance/evaluations", {
-        method: "POST",
+      const response = await fetch(
+        evaluation
+          ? `/api/compliance/evaluations/${evaluation.id}`
+          : "/api/compliance/evaluations",
+        {
+        method: evaluation ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
-      });
+        },
+      );
       const payload = (await response.json()) as ApiResponse<EvaluationSummary>;
 
       if (!response.ok || !payload.data) {
@@ -252,9 +262,14 @@ export function EvaluationForm({
           ) : (
             <ClipboardPlus aria-hidden="true" className="size-4" />
           )}
-          Registrar evaluación
+          {evaluation ? "Guardar cambios" : "Registrar evaluación"}
         </Button>
       </div>
     </form>
   );
+}
+
+function toDateInput(value: Date | string): string {
+  const date = value instanceof Date ? value : new Date(value);
+  return date.toISOString().slice(0, 10);
 }

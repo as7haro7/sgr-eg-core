@@ -209,6 +209,25 @@ export class RiskRepository {
     });
   }
 
+  hasActiveRole(userId: string, roleName: string) {
+    return this.database.usuarios.findFirst({
+      where: {
+        id: userId,
+        estado: "activo",
+        deleted_at: null,
+        usuario_roles: {
+          some: {
+            roles: {
+              nombre: roleName,
+              estado: "activo",
+            },
+          },
+        },
+      },
+      select: { id: true },
+    });
+  }
+
   listActiveOwners(unitIds?: string[]) {
     return this.database.usuarios.findMany({
       where: {

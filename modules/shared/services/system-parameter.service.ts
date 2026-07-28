@@ -30,16 +30,51 @@ function toPrismaJson(
   return value === null ? Prisma.JsonNull : value;
 }
 
-const knownParameterSchemas: Record<string, z.ZodType> = {
-  evidencia_max_bytes: z.number().int().min(1).max(50 * 1024 * 1024),
-  alerta_dias_vencimiento: z.number().int().min(0).max(365),
-  sesion_minutos: z.number().int().min(5).max(1_440),
-  criticidad_rangos: z.object({
+const criticalityRangesSchema = z
+  .object({
     bajo: z.tuple([z.number().min(1), z.number().max(25)]),
     moderado: z.tuple([z.number().min(1), z.number().max(25)]),
     alto: z.tuple([z.number().min(1), z.number().max(25)]),
     critico: z.tuple([z.number().min(1), z.number().max(25)]),
-  }),
+  })
+  .superRefine((ranges, context) => {
+    const ordered = [
+      ranges.bajo,
+      ranges.moderado,
+      ranges.alto,
+      ranges.critico,
+    ];
+
+    ordered.forEach(([start, end], index) => {
+      if (start > end) {
+        context.addIssue({
+          code: "custom",
+          message: "El inicio de cada rango debe ser menor o igual a su fin.",
+          path: [index],
+        });
+      }
+      if (index > 0 && start !== ordered[index - 1][1] + 1) {
+        context.addIssue({
+          code: "custom",
+          message: "Los rangos de criticidad deben ser continuos y no superponerse.",
+          path: [index],
+        });
+      }
+    });
+
+    if (ranges.bajo[0] !== 1 || ranges.critico[1] !== 25) {
+      context.addIssue({
+        code: "custom",
+        message: "Los rangos de criticidad deben cubrir todos los niveles de 1 a 25.",
+      });
+    }
+  });
+
+const knownParameterSchemas: Record<string, z.ZodType> = {
+  evidencia_max_bytes: z.number().int().min(1).max(50 * 1024 * 1024),
+  alerta_dias_vencimiento: z.number().int().min(0).max(365),
+  sesion_minutos: z.number().int().min(5).max(1_440),
+  criticidad_rangos: criticalityRangesSchema,
 };
 
 function assertValidParameterValue(key: string, value: unknown): void {

@@ -89,6 +89,7 @@ export const createEvaluationSchema = z
       }
     }
   });
+export const updateEvaluationSchema = createEvaluationSchema;
 
 export const listEvaluationsQuerySchema = z.object({
   page: queryPageSchema,
@@ -107,6 +108,12 @@ export type CreateEvaluationFormInput = z.input<
 >;
 export type CreateEvaluationInput = z.output<
   typeof createEvaluationSchema
+>;
+export type UpdateEvaluationFormInput = z.input<
+  typeof updateEvaluationSchema
+>;
+export type UpdateEvaluationInput = z.output<
+  typeof updateEvaluationSchema
 >;
 export type ListEvaluationsQuery = z.output<
   typeof listEvaluationsQuerySchema

@@ -1,3 +1,4 @@
+import type { Prisma } from "@/generated/prisma/client";
 import { AppError } from "@/lib/app-error";
 import { withAuditContext } from "@/lib/transaction";
 import { AuthorizationService } from "@/modules/auth/services/authorization.service";
@@ -15,7 +16,10 @@ import type {
   ListAlertsQuery,
 } from "@/modules/alerts/validators/alert.validator";
 
-function mapAlert(record: AlertSummaryRecord): AlertSummary {
+function mapAlert(
+  record: AlertSummaryRecord,
+  canUpdate = false,
+): AlertSummary {
   return {
     id: record.id,
     ruleCode: record.regla_codigo,
@@ -33,7 +37,99 @@ function mapAlert(record: AlertSummaryRecord): AlertSummary {
     status: record.estado,
     generatedAt: record.generada_at,
     attendedAt: record.atendida_at,
+    canUpdate,
+    history: record.alerta_historial.map((entry) => ({
+      id: entry.id,
+      event: entry.evento,
+      comment: entry.comentario,
+      createdAt: entry.created_at,
+      user: {
+        id: entry.usuarios.id,
+        name: entry.usuarios.nombre,
+      },
+    })),
   };
+}
+
+function allowsAlertAction(
+  permission: AuthPrincipal["permissions"][number],
+  action: "read" | "update",
+) {
+  return action === "read" ? permission.canRead : permission.canUpdate;
+}
+
+function buildAlertScopeWhere(
+  principal: AuthPrincipal,
+  action: "read" | "update",
+): Prisma.alertasWhereInput {
+  const permissions = principal.permissions.filter(
+    (permission) =>
+      permission.module === "alertas" &&
+      allowsAlertAction(permission, action),
+  );
+  if (permissions.some(({ scope }) => scope === "global")) return {};
+
+  const scopes: Prisma.alertasWhereInput[] = [];
+  if (
+    permissions.some(
+      ({ scope }) => scope === "propio" || scope === "asignado",
+    )
+  ) {
+    scopes.push({ destinatario_id: principal.userId });
+  }
+  if (
+    permissions.some(({ scope }) => scope === "unidad") &&
+    principal.unitIds.length > 0
+  ) {
+    const unitIds = principal.unitIds;
+    scopes.push(
+      { destinatario_id: principal.userId },
+      { riesgos: { unidad_id: { in: unitIds } } },
+      { controles: { riesgos: { unidad_id: { in: unitIds } } } },
+      {
+        planes_mitigacion: {
+          riesgos: { unidad_id: { in: unitIds } },
+        },
+      },
+      {
+        acciones_mitigacion: {
+          planes_mitigacion: {
+            riesgos: { unidad_id: { in: unitIds } },
+          },
+        },
+      },
+      {
+        hallazgos: {
+          auditorias: { unidad_id: { in: unitIds } },
+        },
+      },
+      {
+        evaluaciones_cumplimiento: {
+          unidad_id: { in: unitIds },
+        },
+      },
+    );
+  }
+  if (scopes.length === 0) {
+    throw new AppError(
+      "FORBIDDEN",
+      "No tienes permiso para consultar alertas.",
+      403,
+    );
+  }
+  return { OR: scopes };
+}
+
+function getAlertUnitId(record: AlertSummaryRecord): string | undefined {
+  return (
+    record.riesgos?.unidad_id ??
+    record.controles?.riesgos.unidad_id ??
+    record.planes_mitigacion?.riesgos.unidad_id ??
+    record.acciones_mitigacion?.planes_mitigacion.riesgos.unidad_id ??
+    record.hallazgos?.auditorias.unidad_id ??
+    record.evaluaciones_cumplimiento?.unidad_id ??
+    undefined
+  );
 }
 
 export class AlertService {
@@ -46,15 +142,29 @@ export class AlertService {
     query: ListAlertsQuery,
     principal: AuthPrincipal,
   ): Promise<PaginatedAlerts> {
-    const result = await this.repository.list(principal.userId, query);
+    const readPermissions = principal.permissions.filter(
+      ({ module, canRead }) =>
+        module === "alertas" && canRead,
+    );
+    const result = await this.repository.list(
+      query,
+      buildAlertScopeWhere(principal, "read"),
+    );
 
     return {
-      items: result.items.map(mapAlert),
+      items: result.items.map((alert) =>
+        mapAlert(alert, this.canUpdate(alert, principal)),
+      ),
       page: query.page,
       pageSize: query.pageSize,
       total: result.total,
       totalPages: Math.ceil(result.total / query.pageSize),
       unreadCount: result.unreadCount,
+      viewScope: readPermissions.some(({ scope }) => scope === "global")
+        ? "global"
+        : readPermissions.some(({ scope }) => scope === "unidad")
+          ? "unit"
+          : "personal",
     };
   }
 
@@ -65,9 +175,10 @@ export class AlertService {
   ): Promise<AlertSummary> {
     const alert = await this.repository.findById(alertId);
 
-    if (!alert || alert.destinatario_id !== principal.userId) {
-      throw new AppError("NOT_FOUND", "La alerta no existe o no te pertenece.", 404);
+    if (!alert) {
+      throw new AppError("NOT_FOUND", "La alerta no existe.", 404);
     }
+    this.assertCanUpdate(alert, principal);
 
     if (alert.estado === "atendida") {
       throw new AppError("CONFLICT", "La alerta ya fue atendida.", 409);
@@ -86,7 +197,7 @@ export class AlertService {
       return updated;
     });
 
-    return mapAlert(updatedAlert);
+    return mapAlert(updatedAlert, true);
   }
 
   async reopen(
@@ -96,9 +207,10 @@ export class AlertService {
   ): Promise<AlertSummary> {
     const alert = await this.repository.findById(alertId);
 
-    if (!alert || alert.destinatario_id !== principal.userId) {
-      throw new AppError("NOT_FOUND", "La alerta no existe o no te pertenece.", 404);
+    if (!alert) {
+      throw new AppError("NOT_FOUND", "La alerta no existe.", 404);
     }
+    this.assertCanUpdate(alert, principal);
 
     if (alert.estado !== "atendida") {
       throw new AppError("CONFLICT", "La alerta no está en estado atendido.", 409);
@@ -117,6 +229,40 @@ export class AlertService {
       return updated;
     });
 
-    return mapAlert(updatedAlert);
+    return mapAlert(updatedAlert, true);
+  }
+
+  private canUpdate(
+    alert: AlertSummaryRecord,
+    principal: AuthPrincipal,
+  ): boolean {
+    const unitId =
+      getAlertUnitId(alert) ??
+      (alert.destinatario_id === principal.userId
+        ? principal.primaryUnitId ?? principal.unitIds[0]
+        : undefined);
+    return this.authorization.isAllowed(
+      principal,
+      "alertas",
+      "update",
+      {
+        unitId,
+        ownerId: alert.destinatario_id,
+        assigneeIds: [alert.destinatario_id],
+      },
+    );
+  }
+
+  private assertCanUpdate(
+    alert: AlertSummaryRecord,
+    principal: AuthPrincipal,
+  ): void {
+    if (!this.canUpdate(alert, principal)) {
+      throw new AppError(
+        "FORBIDDEN",
+        "No tienes permiso para atender esta alerta.",
+        403,
+      );
+    }
   }
 }

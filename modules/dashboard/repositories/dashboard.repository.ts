@@ -10,10 +10,14 @@ import {
 type DashboardDatabaseClient = Pick<
   TransactionClient,
   | "alertas"
+  | "acciones_mitigacion"
+  | "apetitos_riesgo"
+  | "auditorias"
   | "controles"
   | "evaluaciones_cumplimiento"
   | "hallazgos"
   | "parametros_sistema"
+  | "planes_mitigacion"
   | "riesgos"
 >;
 
@@ -58,18 +62,35 @@ export class DashboardRepository {
     filter: DashboardFilter,
     unitIdsScope?: string[],
   ) {
-    const [risks, rangeParameter] = await Promise.all([
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    const [risks, rangeParameter, appetites] = await Promise.all([
       this.database.riesgos.findMany({
         where: this.buildRiskWhere(filter, unitIdsScope),
         select: {
           nivel_residual: true,
           probabilidad: true,
           impacto: true,
+          categoria_id: true,
+          unidad_id: true,
+          categorias_riesgo: { select: { apetito_base: true } },
         },
       }),
       this.database.parametros_sistema.findUnique({
         where: { clave: "criticidad_rangos" },
         select: { valor: true },
+      }),
+      this.database.apetitos_riesgo.findMany({
+        where: {
+          vigente_desde: { lte: today },
+          OR: [{ vigente_hasta: null }, { vigente_hasta: { gte: today } }],
+        },
+        select: {
+          categoria_id: true,
+          unidad_id: true,
+          umbral: true,
+        },
+        orderBy: { vigente_desde: "desc" },
       }),
     ]);
     const ranges = parseCriticalityRanges(rangeParameter?.valor);
@@ -86,6 +107,20 @@ export class DashboardRepository {
         classifyRiskLevel(risk.nivel_residual.toNumber(), ranges)
       ]++;
     }
+    const appetiteByScope = new Map<string, number>();
+    for (const appetite of appetites) {
+      const key = `${appetite.categoria_id}:${appetite.unidad_id ?? "*"}`;
+      if (!appetiteByScope.has(key)) {
+        appetiteByScope.set(key, appetite.umbral.toNumber());
+      }
+    }
+    const risksOverAppetite = risks.filter((risk) => {
+      const threshold =
+        appetiteByScope.get(`${risk.categoria_id}:${risk.unidad_id}`) ??
+        appetiteByScope.get(`${risk.categoria_id}:*`) ??
+        risk.categorias_riesgo.apetito_base.toNumber();
+      return risk.nivel_residual.toNumber() > threshold;
+    }).length;
 
     const riskDistribution = [
       { level: "Bajo", count: distribution.low },
@@ -118,6 +153,101 @@ export class DashboardRepository {
       criticalRisks: distribution.critical,
       riskDistribution,
       heatmap,
+      risksOverAppetite,
+      criticalityRanges: ranges,
+    };
+  }
+
+  async getMitigationMetrics(
+    filter: DashboardFilter,
+    unitIdsScope?: string[],
+  ) {
+    const riskWhere = this.buildRiskWhere(filter, unitIdsScope);
+    const [plans, overdueActions] = await Promise.all([
+      this.database.planes_mitigacion.findMany({
+        where: {
+          deleted_at: null,
+          riesgos: riskWhere,
+        },
+        select: {
+          avance: true,
+          estado: true,
+          fecha_limite: true,
+          riesgos: { select: { nivel_residual: true } },
+        },
+      }),
+      this.database.acciones_mitigacion.count({
+        where: {
+          deleted_at: null,
+          estado: { notIn: ["completado", "cancelado"] },
+          fecha_limite: { lt: new Date() },
+          planes_mitigacion: { riesgos: riskWhere },
+        },
+      }),
+    ]);
+    const now = new Date();
+    const overduePlans = plans.filter(
+      (plan) =>
+        !["completado", "cancelado"].includes(plan.estado) &&
+        plan.fecha_limite < now,
+    ).length;
+    const weighted = plans.reduce(
+      (accumulator, plan) => {
+        const weight = Math.max(
+          1,
+          plan.riesgos.nivel_residual.toNumber(),
+        );
+        return {
+          total: accumulator.total + plan.avance.toNumber() * weight,
+          weight: accumulator.weight + weight,
+        };
+      },
+      { total: 0, weight: 0 },
+    );
+
+    return {
+      overdueItems: overduePlans + overdueActions,
+      progress: weighted.weight > 0 ? weighted.total / weighted.weight : 0,
+    };
+  }
+
+  async getAuditCoverage(
+    filter: DashboardFilter,
+    unitIdsScope?: string[],
+  ) {
+    const audits = await this.database.auditorias.findMany({
+      where: {
+        deleted_at: null,
+        unidad_id: { not: null },
+        unidades_negocio: this.buildUnitWhere(filter, unitIdsScope),
+        ...(filter.periodStart || filter.periodEnd
+          ? {
+              fecha_inicio: { lte: filter.periodEnd },
+              OR: [
+                { fecha_fin: null },
+                { fecha_fin: { gte: filter.periodStart } },
+              ],
+            }
+          : {}),
+      },
+      select: { unidad_id: true, estado: true },
+    });
+    const plannedUnits = new Set(
+      audits.flatMap(({ unidad_id }) => (unidad_id ? [unidad_id] : [])),
+    );
+    const auditedUnits = new Set(
+      audits.flatMap(({ estado, unidad_id }) =>
+        estado === "cerrada" && unidad_id ? [unidad_id] : [],
+      ),
+    );
+
+    return {
+      auditedUnits: auditedUnits.size,
+      plannedUnits: plannedUnits.size,
+      percentage:
+        plannedUnits.size > 0
+          ? (auditedUnits.size / plannedUnits.size) * 100
+          : 0,
     };
   }
 
@@ -225,13 +355,80 @@ export class DashboardRepository {
     return metrics;
   }
 
-  getAlertsCount(userId: string) {
-    return this.database.alertas.count({
-      where: {
-        destinatario_id: userId,
-        estado: "pendiente",
-        deleted_at: null,
-      },
-    });
+  async getAlertMetrics(
+    filter: DashboardFilter,
+    userId: string,
+    unitIdsScope?: string[],
+  ) {
+    const scopeWhere: Prisma.alertasWhereInput | undefined = unitIdsScope
+      ? {
+          OR: [
+            { destinatario_id: userId },
+            { riesgos: { unidad_id: { in: unitIdsScope } } },
+            { controles: { riesgos: { unidad_id: { in: unitIdsScope } } } },
+            {
+              planes_mitigacion: {
+                riesgos: { unidad_id: { in: unitIdsScope } },
+              },
+            },
+            {
+              acciones_mitigacion: {
+                planes_mitigacion: {
+                  riesgos: { unidad_id: { in: unitIdsScope } },
+                },
+              },
+            },
+            { hallazgos: { auditorias: { unidad_id: { in: unitIdsScope } } } },
+            {
+              evaluaciones_cumplimiento: {
+                unidad_id: { in: unitIdsScope },
+              },
+            },
+          ],
+        }
+      : undefined;
+    const periodWhere =
+      filter.periodStart || filter.periodEnd
+        ? {
+            generada_at: {
+              gte: filter.periodStart,
+              lte: filter.periodEnd,
+            },
+          }
+        : {};
+    const [activeAlerts, attended] = await Promise.all([
+      this.database.alertas.count({
+        where: {
+          estado: "pendiente",
+          deleted_at: null,
+          ...periodWhere,
+          AND: scopeWhere ? [scopeWhere] : undefined,
+        },
+      }),
+      this.database.alertas.findMany({
+        where: {
+          estado: "atendida",
+          atendida_at: { not: null },
+          deleted_at: null,
+          ...periodWhere,
+          AND: scopeWhere ? [scopeWhere] : undefined,
+        },
+        select: { generada_at: true, atendida_at: true },
+      }),
+    ]);
+    const totalHours = attended.reduce((sum, alert) => {
+      if (!alert.atendida_at) return sum;
+      return (
+        sum +
+        (alert.atendida_at.getTime() - alert.generada_at.getTime()) /
+          3_600_000
+      );
+    }, 0);
+
+    return {
+      activeAlerts,
+      averageAttentionHours:
+        attended.length > 0 ? totalHours / attended.length : null,
+    };
   }
 }

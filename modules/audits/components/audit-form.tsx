@@ -21,12 +21,14 @@ import {
 import type { ApiResponse } from "@/types/api-response";
 
 interface AuditFormProps {
+  audit?: AuditSummary;
   currentUserId: string;
   units: BusinessUnitOption[];
   users: AuditUserOption[];
 }
 
 export function AuditForm({
+  audit,
   currentUserId,
   units,
   users,
@@ -44,13 +46,13 @@ export function AuditForm({
     resolver: zodResolver(createAuditSchema),
     mode: "onChange",
     defaultValues: {
-      objective: "",
-      scope: "",
-      startDate: "",
-      endDate: "",
-      responsibleId: currentUserId,
-      unitId: "",
-      teamMemberIds: [],
+      objective: audit?.objective ?? "",
+      scope: audit?.scope ?? "",
+      startDate: audit ? toDateInput(audit.startDate) : "",
+      endDate: audit?.endDate ? toDateInput(audit.endDate) : "",
+      responsibleId: audit?.responsible.id ?? currentUserId,
+      unitId: audit?.unit?.id ?? "",
+      teamMemberIds: audit?.team.map(({ id }) => id) ?? [],
     },
   });
 
@@ -58,11 +60,14 @@ export function AuditForm({
     setFeedback(null);
 
     try {
-      const response = await fetch("/api/audits", {
-        method: "POST",
+      const response = await fetch(
+        audit ? `/api/audits/${audit.id}` : "/api/audits",
+        {
+        method: audit ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
-      });
+        },
+      );
       const payload = (await response.json()) as ApiResponse<AuditSummary>;
 
       setFeedback({
@@ -192,9 +197,14 @@ export function AuditForm({
           ) : (
             <ClipboardPlus aria-hidden="true" className="size-4" />
           )}
-          Planificar auditoría
+          {audit ? "Guardar cambios" : "Planificar auditoría"}
         </Button>
       </div>
     </form>
   );
+}
+
+function toDateInput(value: Date | string): string {
+  const date = value instanceof Date ? value : new Date(value);
+  return date.toISOString().slice(0, 10);
 }

@@ -111,4 +111,48 @@ describe("Integridad PostgreSQL", () => {
       ]),
     ).rejects.toThrow("inmutable");
   });
+
+  databaseIt("mantiene la matriz RBAC alineada para roles críticos", async () => {
+    const permissions = await client.query<{
+      rol: string;
+      modulo: string;
+      puede_leer: boolean;
+      puede_actualizar: boolean;
+      alcance: string;
+    }>(
+      `SELECT r.nombre AS rol, m.codigo AS modulo,
+              p.puede_leer, p.puede_actualizar, p.alcance::text
+         FROM permisos_rol p
+         JOIN roles r ON r.id = p.rol_id
+         JOIN modulos m ON m.id = p.modulo_id
+        WHERE (r.nombre = 'propietario_riesgo' AND m.codigo = 'bitacora')
+           OR (r.nombre = 'equipo_tecnico' AND m.codigo = 'bitacora')
+           OR (r.nombre = 'administrador' AND m.codigo = 'auditorias')
+        ORDER BY r.nombre`,
+    );
+
+    expect(permissions.rows).toEqual([
+      {
+        rol: "administrador",
+        modulo: "auditorias",
+        puede_leer: true,
+        puede_actualizar: false,
+        alcance: "global",
+      },
+      {
+        rol: "equipo_tecnico",
+        modulo: "bitacora",
+        puede_leer: true,
+        puede_actualizar: false,
+        alcance: "global",
+      },
+      {
+        rol: "propietario_riesgo",
+        modulo: "bitacora",
+        puede_leer: true,
+        puede_actualizar: false,
+        alcance: "asignado",
+      },
+    ]);
+  });
 });

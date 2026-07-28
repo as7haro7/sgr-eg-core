@@ -1,8 +1,8 @@
 import { ArrowLeft, BookPlus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
-import { AuthorizationService } from "@/modules/auth/services/authorization.service";
 import { getApplicationPrincipal } from "@/modules/auth/services/current-principal.service";
 import { BusinessUnitService } from "@/modules/business-units/services/business-unit.service";
 import { CountryService } from "@/modules/business-units/services/country.service";
@@ -13,21 +13,25 @@ export const metadata: Metadata = {
 };
 export const dynamic = "force-dynamic";
 
-const authorization = new AuthorizationService();
 const businessUnitService = new BusinessUnitService();
 const countryService = new CountryService();
 
 export default async function NewRegulationPage() {
   const principal = await getApplicationPrincipal();
-  authorization.assertAllowed(principal, "cumplimiento", "create");
+  const createPermissions = principal.permissions.filter(
+    ({ module, canCreate }) =>
+      module === "cumplimiento" && canCreate,
+  );
+  if (createPermissions.length === 0) {
+    redirect("/compliance/regulations");
+  }
 
   const [countries, units] = await Promise.all([
     countryService.list(),
     businessUnitService.listActive(),
   ]);
-  const hasGlobalCreate = principal.permissions.some(
-    ({ module, canCreate, scope }) =>
-      module === "cumplimiento" && canCreate && scope === "global",
+  const hasGlobalCreate = createPermissions.some(
+    ({ scope }) => scope === "global",
   );
   const allowedCountryIds = new Set(
     units
@@ -60,7 +64,10 @@ export default async function NewRegulationPage() {
           </div>
         </div>
       </header>
-      <RegulationForm countries={availableCountries} />
+      <RegulationForm
+        countries={availableCountries}
+        allowGlobalScope={hasGlobalCreate}
+      />
     </div>
   );
 }

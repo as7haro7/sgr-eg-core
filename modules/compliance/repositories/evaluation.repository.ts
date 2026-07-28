@@ -136,6 +136,7 @@ export class EvaluationRepository {
     unitId: string,
     periodStart: Date,
     periodEnd: Date,
+    excludeId?: string,
   ) {
     return this.database.evaluaciones_cumplimiento.findFirst({
       where: {
@@ -144,6 +145,7 @@ export class EvaluationRepository {
         periodo_inicio: periodStart,
         periodo_fin: periodEnd,
         deleted_at: null,
+        id: excludeId ? { not: excludeId } : undefined,
       },
       select: { id: true },
     });
@@ -151,6 +153,17 @@ export class EvaluationRepository {
 
   create(data: Prisma.evaluaciones_cumplimientoUncheckedCreateInput) {
     return this.database.evaluaciones_cumplimiento.create({
+      data,
+      select: evaluationSummarySelect,
+    });
+  }
+
+  update(
+    id: string,
+    data: Prisma.evaluaciones_cumplimientoUncheckedUpdateInput,
+  ) {
+    return this.database.evaluaciones_cumplimiento.update({
+      where: { id },
       data,
       select: evaluationSummarySelect,
     });

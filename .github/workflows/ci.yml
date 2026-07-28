@@ -45,6 +45,8 @@ jobs:
           RUN_DB_TESTS: "true"
       - run: npm run build
       - name: E2E smoke
+        env:
+          RUN_MUTATING_E2E: "true"
         run: |
           npm start > /tmp/sgr-eg.log 2>&1 &
           for i in {1..30}; do

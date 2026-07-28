@@ -1,4 +1,7 @@
 import {
+  AlarmClock,
+  ChartNoAxesCombined,
+  ClipboardCheck,
   ShieldAlert,
   ShieldCheck,
   Target,
@@ -76,6 +79,71 @@ export function DashboardKPIs({ summary }: DashboardKPIsProps) {
               {summary.activeAlerts}
             </p>
           </div>
+        </div>
+      </div>
+
+      <Kpi
+        icon={<Target className="size-6" />}
+        label="Sobre apetito"
+        value={summary.risksOverAppetite}
+        tone="text-red-700 bg-red-50"
+      />
+      <Kpi
+        icon={<AlarmClock className="size-6" />}
+        label="Mitigaciones vencidas"
+        value={summary.overdueMitigationItems}
+        tone="text-amber-700 bg-amber-50"
+      />
+      <Kpi
+        icon={<ChartNoAxesCombined className="size-6" />}
+        label="Avance de mitigación"
+        value={`${Math.round(summary.mitigationProgress)}%`}
+        tone="text-blue-700 bg-blue-50"
+      />
+      <Kpi
+        icon={<AlarmClock className="size-6" />}
+        label="Atención promedio"
+        value={
+          summary.averageAlertAttentionHours === null
+            ? "Sin datos"
+            : `${summary.averageAlertAttentionHours.toFixed(1)} h`
+        }
+        tone="text-violet-700 bg-violet-50"
+      />
+      <Kpi
+        icon={<ClipboardCheck className="size-6" />}
+        label="Cobertura de auditoría"
+        value={`${Math.round(summary.auditCoverage.percentage)}%`}
+        detail={`${summary.auditCoverage.auditedUnits} de ${summary.auditCoverage.plannedUnits} unidades`}
+        tone="text-emerald-700 bg-emerald-50"
+      />
+    </div>
+  );
+}
+
+function Kpi({
+  detail,
+  icon,
+  label,
+  tone,
+  value,
+}: {
+  detail?: string;
+  icon: React.ReactNode;
+  label: string;
+  tone: string;
+  value: number | string;
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="flex items-center gap-4">
+        <div className={`flex size-12 items-center justify-center rounded-xl ${tone}`}>
+          {icon}
+        </div>
+        <div>
+          <p className="text-sm font-medium text-slate-500">{label}</p>
+          <p className="text-2xl font-bold text-slate-950">{value}</p>
+          {detail && <p className="mt-1 text-xs text-slate-500">{detail}</p>}
         </div>
       </div>
     </div>

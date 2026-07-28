@@ -475,6 +475,22 @@ paths:
         "500": { $ref: "#/components/responses/Error" }
         "404": { $ref: "#/components/responses/Error" }
         "409": { $ref: "#/components/responses/Error" }
+  /risks/{riskId}/evaluate:
+    post:
+      tags: [Riesgos]
+      summary: Calcular y guardar la evaluación del riesgo
+      parameters:
+        - $ref: "#/components/parameters/RiskId"
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
   /risks/{riskId}/transition:
     post:
       tags: [Riesgos]
@@ -547,6 +563,34 @@ paths:
         "500": { $ref: "#/components/responses/Error" }
         "404": { $ref: "#/components/responses/Error" }
         "409": { $ref: "#/components/responses/Error" }
+  /risks/{riskId}/plans:
+    get:
+      tags: [Mitigación]
+      summary: Alias compatible para listar planes del riesgo
+      parameters:
+        - $ref: "#/components/parameters/RiskId"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+    post:
+      tags: [Mitigación]
+      summary: Alias compatible para crear un plan del riesgo
+      parameters:
+        - $ref: "#/components/parameters/RiskId"
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
+      responses:
+        "201": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
   /controls/{controlId}:
     patch:
       tags: [Controles]
@@ -701,6 +745,21 @@ paths:
         "403": { $ref: "#/components/responses/Error" }
         "500": { $ref: "#/components/responses/Error" }
         "404": { $ref: "#/components/responses/Error" }
+    patch:
+      tags: [Auditorías]
+      summary: Actualizar alcance, fechas, responsable y equipo
+      parameters:
+        - $ref: "#/components/parameters/AuditId"
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
   /audits/{auditId}/transition:
     post:
       tags: [Auditorías]
@@ -949,6 +1008,37 @@ paths:
         "403": { $ref: "#/components/responses/Error" }
         "500": { $ref: "#/components/responses/Error" }
         "404": { $ref: "#/components/responses/Error" }
+    patch:
+      tags: [Cumplimiento]
+      summary: Actualizar evaluación con trazabilidad
+      parameters:
+        - $ref: "#/components/parameters/EvaluationId"
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+  /requirements/{requirementId}/assessments:
+    post:
+      tags: [Cumplimiento]
+      summary: Alias compatible para evaluar un requisito
+      parameters:
+        - $ref: "#/components/parameters/RequirementId"
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
+      responses:
+        "201": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
   /alerts:
     get:
       tags: [Alertas]
@@ -958,6 +1048,19 @@ paths:
         "400": { $ref: "#/components/responses/Error" }
         "401": { $ref: "#/components/responses/Error" }
         "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+    patch:
+      tags: [Alertas]
+      summary: Atender una alerta mediante el contrato mínimo
+      requestBody:
+        $ref: "#/components/requestBodies/JsonBody"
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
         "500": { $ref: "#/components/responses/Error" }
   /alerts/engine:
     post:
@@ -1073,6 +1176,20 @@ paths:
         - { in: query, name: periodEnd, schema: { type: string, format: date } }
       responses:
         "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
+  /dashboard/export:
+    get:
+      tags: [Reportes]
+      summary: Exportar los indicadores filtrados en CSV
+      responses:
+        "200":
+          description: Archivo CSV
+          content:
+            text/csv:
+              schema: { type: string }
         "400": { $ref: "#/components/responses/Error" }
         "401": { $ref: "#/components/responses/Error" }
         "403": { $ref: "#/components/responses/Error" }

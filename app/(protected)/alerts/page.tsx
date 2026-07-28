@@ -1,5 +1,6 @@
 import { AlertTriangle, CheckCircle2, Clock, Inbox } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getApplicationPrincipal } from "@/modules/auth/services/current-principal.service";
@@ -49,7 +50,15 @@ export default async function AlertsPage({ searchParams }: AlertsPageProps) {
               Bandeja de Alertas
             </h1>
             <p className="text-sm text-slate-600">
-              Tienes {alerts.unreadCount} alerta{alerts.unreadCount === 1 ? "" : "s"} pendiente{alerts.unreadCount === 1 ? "" : "s"}
+              {alerts.viewScope === "personal" ? "Tienes" : "Hay"}{" "}
+              {alerts.unreadCount} alerta
+              {alerts.unreadCount === 1 ? "" : "s"} pendiente
+              {alerts.unreadCount === 1 ? "" : "s"}
+              {alerts.viewScope === "global"
+                ? " en toda la organización"
+                : alerts.viewScope === "unit"
+                  ? " dentro de tus unidades"
+                  : ""}
             </p>
           </div>
         </div>
@@ -150,16 +159,41 @@ export default async function AlertsPage({ searchParams }: AlertsPageProps) {
                       </span>
                     )}
                   </div>
+                  {alert.history.length > 0 && (
+                    <details className="mt-3 rounded-lg border border-slate-200 bg-white p-3 text-sm">
+                      <summary className="cursor-pointer font-semibold text-blue-700">
+                        Historial ({alert.history.length})
+                      </summary>
+                      <ol className="mt-3 space-y-3">
+                        {alert.history.map((entry) => (
+                          <li key={entry.id}>
+                            <p className="font-medium capitalize text-slate-800">
+                              {entry.event} · {entry.user.name}
+                            </p>
+                            <p className="text-slate-600">{entry.comment}</p>
+                            <time className="text-xs text-slate-500">
+                              {new Intl.DateTimeFormat("es-BO", {
+                                dateStyle: "medium",
+                                timeStyle: "short",
+                              }).format(entry.createdAt)}
+                            </time>
+                          </li>
+                        ))}
+                      </ol>
+                    </details>
+                  )}
                 </div>
               </div>
 
-              <div className="flex shrink-0 gap-2">
-                {alert.status === "pendiente" ? (
-                  <AlertAttendModal alertId={alert.id} />
-                ) : (
-                  <AlertReopenModal alertId={alert.id} />
-                )}
-              </div>
+              {alert.canUpdate && (
+                <div className="flex shrink-0 gap-2">
+                  {alert.status === "pendiente" ? (
+                    <AlertAttendModal alertId={alert.id} />
+                  ) : alert.status === "atendida" ? (
+                    <AlertReopenModal alertId={alert.id} />
+                  ) : null}
+                </div>
+              )}
             </div>
           </article>
         ))}
@@ -174,6 +208,29 @@ export default async function AlertsPage({ searchParams }: AlertsPageProps) {
           </div>
         )}
       </div>
+      <footer className="flex items-center justify-between border-t border-slate-200 p-4">
+        <span className="text-sm text-slate-600">
+          Página {alerts.page} de {Math.max(1, alerts.totalPages)}
+        </span>
+        <div className="flex gap-2">
+          {alerts.page > 1 && (
+            <Link
+              href={{ pathname: "/alerts", query: { ...raw, page: alerts.page - 1 } }}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700"
+            >
+              Anterior
+            </Link>
+          )}
+          {alerts.page < alerts.totalPages && (
+            <Link
+              href={{ pathname: "/alerts", query: { ...raw, page: alerts.page + 1 } }}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700"
+            >
+              Siguiente
+            </Link>
+          )}
+        </div>
+      </footer>
     </section>
   );
 }

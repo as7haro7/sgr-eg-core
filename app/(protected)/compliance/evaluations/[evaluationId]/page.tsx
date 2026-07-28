@@ -1,4 +1,4 @@
-import { ArrowLeft, BookCheck } from "lucide-react";
+import { ArrowLeft, BookCheck, Pencil } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -106,9 +106,20 @@ export default async function EvaluationDetailPage({
               </p>
             </div>
           </div>
-          <StatusBadge tone={resultTone[evaluation.result]}>
-            {evaluationResultLabels[evaluation.result]}
-          </StatusBadge>
+          <div className="flex items-center gap-3">
+            {canUpdate && (
+              <Link
+                href={`/compliance/evaluations/${evaluation.id}/edit`}
+                className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-300 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                <Pencil aria-hidden="true" className="size-4" />
+                Editar
+              </Link>
+            )}
+            <StatusBadge tone={resultTone[evaluation.result]}>
+              {evaluationResultLabels[evaluation.result]}
+            </StatusBadge>
+          </div>
         </div>
       </header>
 

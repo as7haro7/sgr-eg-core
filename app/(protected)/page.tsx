@@ -110,9 +110,20 @@ export default async function Home({ searchParams }: HomePageProps) {
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="text-lg font-bold text-slate-950">
-          Filtros del dashboard
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-bold text-slate-950">
+            Filtros del dashboard
+          </h2>
+          <Link
+            href={{
+              pathname: "/api/dashboard/export",
+              query: raw,
+            }}
+            className="rounded-lg border border-blue-300 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
+          >
+            Exportar CSV
+          </Link>
+        </div>
         <form
           method="get"
           className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"

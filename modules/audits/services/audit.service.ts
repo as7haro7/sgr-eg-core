@@ -20,6 +20,7 @@ import type {
   CreateAuditInput,
   ListAuditsQuery,
   TransitionAuditInput,
+  UpdateAuditInput,
 } from "@/modules/audits/validators/audit.validator";
 
 type AuditRecord = NonNullable<
@@ -293,6 +294,83 @@ export class AuditService {
     );
 
     return mapAudit(audit);
+  }
+
+  async update(
+    auditId: string,
+    input: UpdateAuditInput,
+    principal: AuthPrincipal,
+  ): Promise<AuditSummary> {
+    const existing = await this.getAuthorizedAudit(
+      auditId,
+      principal,
+      "update",
+    );
+    if (["cerrada", "cancelada"].includes(existing.estado)) {
+      throw new AppError(
+        "CONFLICT",
+        "Una auditoría cerrada o cancelada no puede modificarse.",
+        409,
+      );
+    }
+
+    const teamMemberIds = [...new Set(input.teamMemberIds)];
+    const assigneeIds = [
+      ...new Set([input.responsibleId, ...teamMemberIds]),
+    ];
+    this.authorization.assertAllowed(
+      principal,
+      "auditorias",
+      "update",
+      {
+        unitId: input.unitId ?? undefined,
+        ownerId: input.responsibleId,
+        assigneeIds,
+      },
+    );
+    const [unit, activeUsers] = await Promise.all([
+      input.unitId
+        ? this.repository.findActiveUnit(input.unitId)
+        : Promise.resolve({ id: "" }),
+      this.repository.findActiveUsers(assigneeIds),
+    ]);
+    if (input.unitId && !unit) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "La unidad no existe o está inactiva.",
+        400,
+      );
+    }
+    if (activeUsers.length !== assigneeIds.length) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "Uno o más integrantes no existen o están inactivos.",
+        400,
+      );
+    }
+
+    const updated = await withAuditContext(
+      principal.userId,
+      (transaction) =>
+        new AuditRepository(transaction).update(auditId, {
+          objetivo: input.objective,
+          alcance: input.scope,
+          fecha_inicio: input.startDate,
+          fecha_fin: input.endDate,
+          usuarios: { connect: { id: input.responsibleId } },
+          unidades_negocio: input.unitId
+            ? { connect: { id: input.unitId } }
+            : { disconnect: true },
+          auditoria_equipo: {
+            deleteMany: {},
+            create: teamMemberIds.map((userId) => ({
+              usuarios: { connect: { id: userId } },
+            })),
+          },
+        }),
+    );
+
+    return mapAudit(updated);
   }
 
   private async getAuthorizedAudit(

@@ -39,6 +39,7 @@ export const createAuditSchema = z
       path: ["endDate"],
     },
   );
+export const updateAuditSchema = createAuditSchema;
 
 export const listAuditsQuerySchema = z.object({
   page: queryPageSchema,
@@ -56,5 +57,7 @@ export const transitionAuditSchema = z.object({
 
 export type CreateAuditFormInput = z.input<typeof createAuditSchema>;
 export type CreateAuditInput = z.output<typeof createAuditSchema>;
+export type UpdateAuditFormInput = z.input<typeof updateAuditSchema>;
+export type UpdateAuditInput = z.output<typeof updateAuditSchema>;
 export type ListAuditsQuery = z.output<typeof listAuditsQuerySchema>;
 export type TransitionAuditInput = z.output<typeof transitionAuditSchema>;

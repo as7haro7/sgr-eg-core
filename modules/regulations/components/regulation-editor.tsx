@@ -10,9 +10,11 @@ import { RegulationForm } from "@/modules/regulations/components/regulation-form
 import type { RegulationSummary } from "@/modules/regulations/types/regulation.types";
 
 export function RegulationEditor({
+  allowGlobalScope = false,
   countries,
   regulation,
 }: {
+  allowGlobalScope?: boolean;
   countries: CountrySummary[];
   regulation: RegulationSummary;
 }) {
@@ -32,6 +34,7 @@ export function RegulationEditor({
         width="lg"
       >
         <RegulationForm
+          allowGlobalScope={allowGlobalScope}
           countries={countries}
           regulation={regulation}
           onSuccess={() => setOpen(false)}

@@ -32,13 +32,21 @@ export class DashboardService {
       controlEffectiveness,
       compliance,
       findings,
-      activeAlerts,
+      mitigation,
+      auditCoverage,
+      alertMetrics,
     ] = await Promise.all([
       this.repository.getRiskMetrics(filter, unitIdsScope),
       this.repository.getControlMetrics(filter, unitIdsScope),
       this.repository.getComplianceMetrics(filter, unitIdsScope),
       this.repository.getFindingsMetrics(filter, unitIdsScope),
-      this.repository.getAlertsCount(principal.userId),
+      this.repository.getMitigationMetrics(filter, unitIdsScope),
+      this.repository.getAuditCoverage(filter, unitIdsScope),
+      this.repository.getAlertMetrics(
+        filter,
+        principal.userId,
+        unitIdsScope,
+      ),
     ]);
 
     return {
@@ -49,7 +57,13 @@ export class DashboardService {
       controlEffectiveness,
       compliance,
       findings,
-      activeAlerts,
+      activeAlerts: alertMetrics.activeAlerts,
+      risksOverAppetite: riskMetrics.risksOverAppetite,
+      overdueMitigationItems: mitigation.overdueItems,
+      mitigationProgress: mitigation.progress,
+      averageAlertAttentionHours: alertMetrics.averageAttentionHours,
+      auditCoverage,
+      criticalityRanges: riskMetrics.criticalityRanges,
     };
   }
 }

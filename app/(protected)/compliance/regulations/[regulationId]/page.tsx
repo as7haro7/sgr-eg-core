@@ -9,7 +9,7 @@ import { getApplicationPrincipal } from "@/modules/auth/services/current-princip
 import { RegulationService } from "@/modules/regulations/services/regulation.service";
 import { RequirementList } from "@/modules/regulations/components/requirement-list";
 import { regulationIdSchema } from "@/modules/regulations/validators/regulation.validator";
-import { AuthorizationService } from "@/modules/auth/services/authorization.service";
+import { BusinessUnitService } from "@/modules/business-units/services/business-unit.service";
 import { CountryService } from "@/modules/business-units/services/country.service";
 import { RegulationEditor } from "@/modules/regulations/components/regulation-editor";
 
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 const regulationService = new RegulationService();
-const authorizationService = new AuthorizationService();
+const businessUnitService = new BusinessUnitService();
 const countryService = new CountryService();
 
 interface RegulationDetailPageProps {
@@ -40,18 +40,48 @@ export default async function RegulationDetailPage({
     const regulation = await notFoundOnMissing(
       regulationService.getRegulationById(regulationId, principal),
     );
-    const [requirementsResult, countries] = await Promise.all([
+    const [requirementsResult, countries, units] = await Promise.all([
       regulationService.listRequirements(
         regulationId,
         { page: 1, pageSize: 500, active: undefined },
         principal,
       ),
       countryService.list(),
+      businessUnitService.listActive(),
     ]);
     const requirements = requirementsResult.items;
 
-    const canUpdate = authorizationService.isAllowed(principal, "cumplimiento", "update");
-    const canCreate = authorizationService.isAllowed(principal, "cumplimiento", "create");
+    const updatePermissions = principal.permissions.filter(
+      ({ module, canUpdate }) =>
+        module === "cumplimiento" && canUpdate,
+    );
+    const createPermissions = principal.permissions.filter(
+      ({ module, canCreate }) =>
+        module === "cumplimiento" && canCreate,
+    );
+    const hasGlobalUpdate = updatePermissions.some(
+      ({ scope }) => scope === "global",
+    );
+    const hasGlobalCreate = createPermissions.some(
+      ({ scope }) => scope === "global",
+    );
+    const allowedCountryIds = new Set(
+      units
+        .filter(({ id }) => principal.unitIds.includes(id))
+        .map(({ country }) => country.id),
+    );
+    const countryIsInUnitScope =
+      regulation.countryId !== null &&
+      allowedCountryIds.has(regulation.countryId);
+    const canUpdate =
+      hasGlobalUpdate ||
+      (updatePermissions.length > 0 && countryIsInUnitScope);
+    const canCreate =
+      hasGlobalCreate ||
+      (createPermissions.length > 0 && countryIsInUnitScope);
+    const availableCountries = hasGlobalUpdate
+      ? countries
+      : countries.filter(({ id }) => allowedCountryIds.has(id));
 
     return (
       <div className="space-y-6">
@@ -79,7 +109,13 @@ export default async function RegulationDetailPage({
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              {canUpdate && <RegulationEditor regulation={regulation} countries={countries} />}
+              {canUpdate && (
+                <RegulationEditor
+                  allowGlobalScope={hasGlobalUpdate}
+                  regulation={regulation}
+                  countries={availableCountries}
+                />
+              )}
               <StatusBadge tone={regulation.status === "vigente" ? "success" : "neutral"}>
                 {regulation.status}
               </StatusBadge>

@@ -33,6 +33,9 @@ export default async function AuditLogPage({ searchParams }: AuditLogPageProps) 
     action: first(raw.action) || undefined,
     entity: first(raw.entity) || undefined,
     userId: first(raw.userId) || undefined,
+    startDate: first(raw.startDate) || undefined,
+    endDate: first(raw.endDate) || undefined,
+    search: first(raw.search) || undefined,
   });
 
   const logs = await auditLogService.list(query, principal);
@@ -67,6 +70,13 @@ export default async function AuditLogPage({ searchParams }: AuditLogPageProps) 
           className="grid gap-3 border-b border-slate-200 p-4 sm:grid-cols-2 lg:grid-cols-4"
           method="get"
         >
+          <input
+            name="search"
+            defaultValue={first(raw.search) ?? ""}
+            aria-label="Buscar en la bitácora"
+            className="form-input"
+            placeholder="Acción, entidad o resultado"
+          />
           <select
             name="action"
             defaultValue={query.action ?? ""}
@@ -86,6 +96,31 @@ export default async function AuditLogPage({ searchParams }: AuditLogPageProps) 
             <option value="reset_password">Restablecimiento de contraseña</option>
             <option value="configurar_acceso">Configuración de acceso</option>
           </select>
+          <input
+            name="userId"
+            defaultValue={first(raw.userId) ?? ""}
+            aria-label="Filtrar por identificador de usuario"
+            className="form-input"
+            placeholder="ID del usuario"
+          />
+          <label className="grid gap-1 text-sm text-slate-700">
+            Desde
+            <input
+              name="startDate"
+              type="date"
+              defaultValue={first(raw.startDate) ?? ""}
+              className="form-input"
+            />
+          </label>
+          <label className="grid gap-1 text-sm text-slate-700">
+            Hasta
+            <input
+              name="endDate"
+              type="date"
+              defaultValue={first(raw.endDate) ?? ""}
+              className="form-input"
+            />
+          </label>
           
           <select
             name="entity"
@@ -195,6 +230,36 @@ export default async function AuditLogPage({ searchParams }: AuditLogPageProps) 
           <span className="text-sm text-slate-600">
             Mostrando {logs.items.length} de {logs.total} registros
           </span>
+          <div className="flex gap-2">
+            {logs.page > 1 && (
+              <Link
+                href={{
+                  pathname: "/settings/audit-log",
+                  query: {
+                    ...raw,
+                    page: logs.page - 1,
+                  },
+                }}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700"
+              >
+                Anterior
+              </Link>
+            )}
+            {logs.page < logs.totalPages && (
+              <Link
+                href={{
+                  pathname: "/settings/audit-log",
+                  query: {
+                    ...raw,
+                    page: logs.page + 1,
+                  },
+                }}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700"
+              >
+                Siguiente
+              </Link>
+            )}
+          </div>
         </div>
       </section>
     </div>

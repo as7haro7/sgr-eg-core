@@ -106,7 +106,7 @@ export class AuditRepository {
     });
   }
 
-  update(id: string, data: Prisma.auditoriasUncheckedUpdateInput) {
+  update(id: string, data: Prisma.auditoriasUpdateInput) {
     return this.database.auditorias.update({
       where: { id },
       data,

@@ -18,10 +18,12 @@ import {
 import type { ApiResponse } from "@/types/api-response";
 
 export function RegulationForm({
+  allowGlobalScope = false,
   countries,
   regulation,
   onSuccess,
 }: {
+  allowGlobalScope?: boolean;
   countries: CountrySummary[];
   regulation?: RegulationSummary;
   onSuccess?: () => void;
@@ -112,7 +114,12 @@ export function RegulationForm({
         error={errors.countryId?.message}
       >
         <select className="form-input" {...register("countryId")}>
-          <option value="">Aplicación general</option>
+          {allowGlobalScope && <option value="">Aplicación general</option>}
+          {!allowGlobalScope && (
+            <option value="" disabled>
+              Selecciona un país
+            </option>
+          )}
           {countries
             .filter(({ status }) => status === "activo")
             .map((country) => (

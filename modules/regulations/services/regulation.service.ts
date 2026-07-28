@@ -1,6 +1,5 @@
 import { AppError } from "@/lib/app-error";
 import { withAuditContext } from "@/lib/transaction";
-import { AuthorizationService } from "@/modules/auth/services/authorization.service";
 import { scheduleAlertEvaluation } from "@/modules/alerts/services/alert-trigger.service";
 import type { AuthPrincipal } from "@/modules/auth/types/auth.types";
 import {
@@ -57,10 +56,7 @@ function mapRequirement(record: RequirementSummaryRecord): RequirementSummary {
 }
 
 export class RegulationService {
-  constructor(
-    private readonly repository = new RegulationRepository(),
-    private readonly authorization = new AuthorizationService(),
-  ) {}
+  constructor(private readonly repository = new RegulationRepository()) {}
 
   // ── Normativas ─────────────────────────────────────────────────────────────
 
@@ -103,15 +99,13 @@ export class RegulationService {
     input: CreateRegulationInput,
     principal: AuthPrincipal,
   ): Promise<RegulationSummary> {
-    this.authorization.assertAllowed(principal, "cumplimiento", "create");
-
     if (input.countryId) {
       const country = await this.repository.findActiveCountry(input.countryId);
       if (!country) {
         throw new AppError("VALIDATION_ERROR", "El país no existe o está inactivo.", 400);
       }
     }
-    await this.assertCountryAllowed(principal, input.countryId);
+    await this.assertCountryAllowed(principal, input.countryId, "create");
 
     const duplicate = await this.repository.findRegulationByUnique(
       input.name,
@@ -147,15 +141,16 @@ export class RegulationService {
     input: UpdateRegulationInput,
     principal: AuthPrincipal,
   ): Promise<RegulationSummary> {
-    this.authorization.assertAllowed(principal, "cumplimiento", "update");
     const existing = await this.repository.findRegulationById(regulationId);
 
     if (!existing) {
       throw new AppError("NOT_FOUND", "La normativa no existe.", 404);
     }
+    await this.assertCountryAllowed(principal, existing.pais_id, "update");
     await this.assertCountryAllowed(
       principal,
       input.countryId === undefined ? existing.pais_id : input.countryId,
+      "update",
     );
 
     const regulation = await withAuditContext(principal.userId, (tx) =>
@@ -215,13 +210,12 @@ export class RegulationService {
     input: CreateRequirementInput,
     principal: AuthPrincipal,
   ): Promise<RequirementSummary> {
-    this.authorization.assertAllowed(principal, "cumplimiento", "create");
     const regulation = await this.repository.findRegulationById(regulationId);
 
     if (!regulation) {
       throw new AppError("NOT_FOUND", "La normativa no existe.", 404);
     }
-    await this.assertCountryAllowed(principal, regulation.pais_id);
+    await this.assertCountryAllowed(principal, regulation.pais_id, "create");
 
     if (regulation.estado !== "vigente") {
       throw new AppError(
@@ -298,8 +292,7 @@ export class RegulationService {
     input: UpdateRequirementInput,
     principal: AuthPrincipal,
   ): Promise<RequirementSummary> {
-    this.authorization.assertAllowed(principal, "cumplimiento", "update");
-    await this.assertRegulationExists(regulationId, principal);
+    await this.assertRegulationExists(regulationId, principal, "update");
     const existing = await this.repository.findRequirementById(requirementId);
 
     if (!existing || existing.normativa_id !== regulationId) {
@@ -372,21 +365,41 @@ export class RegulationService {
   private async assertRegulationExists(
     regulationId: string,
     principal: AuthPrincipal,
+    action: "read" | "create" | "update" = "read",
   ): Promise<void> {
     const regulation = await this.repository.findRegulationById(regulationId);
     if (!regulation) {
       throw new AppError("NOT_FOUND", "La normativa no existe.", 404);
     }
-    await this.assertCountryAllowed(principal, regulation.pais_id);
+    await this.assertCountryAllowed(principal, regulation.pais_id, action);
   }
 
   private async getAllowedCountryIds(
     principal: AuthPrincipal,
+    action: "read" | "create" | "update" = "read",
   ): Promise<string[] | undefined> {
+    const allowsAction = (permission: AuthPrincipal["permissions"][number]) =>
+      action === "read"
+        ? permission.canRead
+        : action === "create"
+          ? permission.canCreate
+          : permission.canUpdate;
+    const permissions = principal.permissions.filter(
+      (permission) =>
+        permission.module === "cumplimiento" &&
+        allowsAction(permission),
+    );
+    if (permissions.length === 0) {
+      throw new AppError(
+        "FORBIDDEN",
+        "No tienes permiso para realizar esta acción.",
+        403,
+      );
+    }
     const hasGlobal = principal.permissions.some(
       (permission) =>
         permission.module === "cumplimiento" &&
-        permission.canRead &&
+        allowsAction(permission) &&
         permission.scope === "global",
     );
     if (hasGlobal) return undefined;
@@ -399,9 +412,17 @@ export class RegulationService {
   private async assertCountryAllowed(
     principal: AuthPrincipal,
     countryId: string | null | undefined,
+    action: "read" | "create" | "update" = "read",
   ): Promise<void> {
-    if (!countryId) return;
-    const allowed = await this.getAllowedCountryIds(principal);
+    const allowed = await this.getAllowedCountryIds(principal, action);
+    if (!countryId) {
+      if (action === "read" || allowed === undefined) return;
+      throw new AppError(
+        "FORBIDDEN",
+        "Solo un permiso global puede administrar normativas de aplicación general.",
+        403,
+      );
+    }
     if (allowed && !allowed.includes(countryId)) {
       throw new AppError(
         "FORBIDDEN",

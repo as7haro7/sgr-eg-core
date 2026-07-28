@@ -24,6 +24,8 @@ Copiar `.env.example` a `.env` y reemplazar todos los valores:
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`:
   notificaciones de alertas. Si no están presentes, las alertas se conservan
   en la aplicación y el envío se registra como omitido.
+- `PG_BIN`: directorio opcional de `pg_dump` y `pg_restore`. En Windows también
+  se detectan automáticamente las instalaciones estándar de PostgreSQL.
 
 No se deben versionar archivos `.env`.
 
@@ -49,12 +51,12 @@ npm run bootstrap:admin -- --name "Administrador" --email "admin@example.com"
 
 La semilla usa exclusivamente información ficticia. Usuarios disponibles:
 
-- `ana.analista@gmail.com`
-- `carlos.propietario@gmail.com`
-- `maria.auditora@gmail.com`
-- `lucia.cumplimiento@gmail.com`
-- `jorge.gerencia@gmail.com`
-- `diego.tecnico@gmail.com`
+- `ana.analista@demo.sgr-eg.local`
+- `carlos.propietario@demo.sgr-eg.local`
+- `maria.auditora@demo.sgr-eg.local`
+- `lucia.cumplimiento@demo.sgr-eg.local`
+- `jorge.gerencia@demo.sgr-eg.local`
+- `diego.tecnico@demo.sgr-eg.local`
 - `admin.sgr@gmail.com` (administrador global)
 
 Contraseña común: `DemoSGR2026!`.
@@ -85,8 +87,11 @@ La suite `tests/cp-requirements.test.ts` cubre las reglas mínimas CP-01 a
 CP-10. `tests/database.integration.test.ts` valida restricciones, triggers e
 inmutabilidad sobre PostgreSQL cuando `RUN_DB_TESTS=true`. El pipeline levanta
 PostgreSQL 16, aplica la migración y la semilla, ejecuta ambas suites, recorre
-login/sesión/logout mediante `npm run test:e2e`, analiza secretos y
-dependencias, compila la aplicación y genera el artefacto de demostración.
+login/sesión/logout y el escenario integrado de riesgo, control, mitigación,
+auditoría, hallazgo, cumplimiento, alertas y dashboard mediante
+`npm run test:e2e`, analiza secretos y dependencias, compila la aplicación y
+genera el artefacto de demostración. La creación de datos E2E se activa con
+`RUN_MUTATING_E2E=true`; el smoke local ordinario es de consulta.
 
 ## Alertas
 
@@ -95,8 +100,7 @@ AL-01 a AL-07 se evalúan:
 - al guardar riesgos, controles, planes, acciones, hallazgos, normativas,
   requisitos o evaluaciones;
 - al iniciar el servidor y cada hora;
-- manualmente desde configuración por un usuario con permiso global de
-  actualización sobre `alertas`.
+- manualmente desde configuración por un administrador autorizado.
 
 La restricción parcial de PostgreSQL evita duplicar una alerta pendiente para
 la misma regla, origen y destinatario.
@@ -123,7 +127,8 @@ dentro de `backups/`.
 
 El contrato está en [`openapi.yaml`](./openapi.yaml). Todas las respuestas JSON
 siguen `{ data, message, errors }`; las descargas de evidencia son redirecciones
-temporales autorizadas a Storage.
+temporales autorizadas a Storage. El dashboard permite exportar los indicadores
+filtrados en CSV y mantiene alias compatibles con las rutas mínimas del informe.
 
 ## Estructura
 

@@ -2,9 +2,12 @@ import type { Prisma } from "@/generated/prisma/client";
 import { logger } from "@/lib/logger";
 import { AlertRepository } from "@/modules/alerts/repositories/alert.repository";
 import { AlertEmailService } from "@/modules/alerts/services/alert-email.service";
+import {
+  classifyRiskLevel,
+  parseCriticalityRanges,
+} from "@/modules/risks/constants/criticality";
 
 const DEFAULT_ALERT_DAYS = 30;
-const DEFAULT_CRITICAL_MINIMUM = 17;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -45,17 +48,22 @@ export class AlertEngineService {
       alertDaysParameter,
       complianceRecipients,
       keyControls,
+      criticalityParameter,
     ] = await Promise.all([
       this.repository.findRisksForAlertEvaluation(),
       this.repository.findEffectiveAppetites(now),
       this.repository.findOverdueMitigationPlans(now),
       this.repository.findOverdueMitigationActions(now),
-      this.repository.findCriticalFindingsWithoutResponse(),
+      this.repository.findCriticalFindingsWithoutResponse(now),
       this.repository.findNonCompliantEvaluations(),
       this.repository.findAlertDaysParameter(),
       this.repository.findComplianceRecipients(),
       this.repository.findKeyControls(),
+      this.repository.findCriticalityRangesParameter(),
     ]);
+    const criticalityRanges = parseCriticalityRanges(
+      criticalityParameter?.valor,
+    );
 
     const alertDays = parameterAsNonNegativeInteger(
       alertDaysParameter?.valor,
@@ -73,6 +81,67 @@ export class AlertEngineService {
       ]);
 
     const alerts: Prisma.alertasUncheckedCreateInput[] = [];
+    const unitIds = [
+      ...new Set([
+        ...risks.map(({ unidad_id }) => unidad_id),
+        ...overduePlans.map(({ riesgos }) => riesgos.unidad_id),
+        ...overdueActions.map(
+          ({ planes_mitigacion }) =>
+            planes_mitigacion.riesgos.unidad_id,
+        ),
+        ...criticalFindings.flatMap(({ auditorias }) =>
+          auditorias.unidad_id ? [auditorias.unidad_id] : [],
+        ),
+        ...nonCompliantEvaluations.map(({ unidad_id }) => unidad_id),
+        ...keyControls.map(({ riesgos }) => riesgos.unidad_id),
+      ]),
+    ];
+    const [
+      analystGroups,
+      complianceGroups,
+      managers,
+      administrators,
+    ] = await Promise.all([
+      Promise.all(
+        unitIds.map(async (unitId) => [
+          unitId,
+          await this.repository.findRecipientsByRoles(
+            ["analista_riesgos"],
+            unitId,
+          ),
+        ] as const),
+      ),
+      Promise.all(
+        unitIds.map(async (unitId) => [
+          unitId,
+          await this.repository.findRecipientsByRoles(
+            ["responsable_cumplimiento"],
+            unitId,
+          ),
+        ] as const),
+      ),
+      this.repository.findRecipientsByRoles(["gerencia"]),
+      this.repository.findRecipientsByRoles(["administrador"]),
+    ]);
+    const analystsByUnit = new Map(analystGroups);
+    const complianceByUnit = new Map(complianceGroups);
+    const recipientIds = (
+      explicit: Array<string | null | undefined>,
+      additional: Array<{ id: string }> = [],
+    ) => [
+      ...new Set([
+        ...explicit.filter((id): id is string => Boolean(id)),
+        ...additional.map(({ id }) => id),
+      ]),
+    ];
+    const addAlerts = (
+      recipients: string[],
+      build: (recipientId: string) => Prisma.alertasUncheckedCreateInput,
+    ) => {
+      for (const recipientId of recipients) {
+        alerts.push(build(recipientId));
+      }
+    };
     const appetiteByScope = new Map<string, number>();
     for (const appetite of appetites) {
       const key = `${appetite.categoria_id}:${appetite.unidad_id ?? "*"}`;
@@ -90,57 +159,102 @@ export class AlertEngineService {
         risk.categorias_riesgo.apetito_base.toNumber();
       if (risk.nivel_residual.toNumber() <= appetite) continue;
 
-      alerts.push({
-        regla_codigo: "AL-01",
-        severidad: "alta",
-        riesgo_id: risk.id,
-        destinatario_id: risk.propietario_id,
-        mensaje: `El riesgo ${risk.codigo} supera el apetito vigente (${appetite}).`,
-      });
+      const severity =
+        classifyRiskLevel(
+          risk.nivel_residual.toNumber(),
+          criticalityRanges,
+        ) === "critical"
+          ? "critica"
+          : "alta";
+      addAlerts(
+        recipientIds(
+          [risk.propietario_id],
+          [
+            ...(analystsByUnit.get(risk.unidad_id) ?? []),
+            ...managers,
+          ],
+        ),
+        (recipientId) => ({
+          regla_codigo: "AL-01",
+          severidad: severity,
+          riesgo_id: risk.id,
+          destinatario_id: recipientId,
+          mensaje: `El riesgo ${risk.codigo} supera el apetito vigente (${appetite}).`,
+        }),
+      );
     }
 
     // AL-02: planes o acciones vencidos.
     for (const plan of overduePlans) {
-      alerts.push({
-        regla_codigo: "AL-02",
-        severidad: "alta",
-        plan_id: plan.id,
-        destinatario_id: plan.responsable_id,
-        mensaje: "El plan de mitigación está vencido.",
-      });
+      addAlerts(
+        recipientIds(
+          [plan.responsable_id],
+          analystsByUnit.get(plan.riesgos.unidad_id) ?? [],
+        ),
+        (recipientId) => ({
+          regla_codigo: "AL-02",
+          severidad: "alta",
+          plan_id: plan.id,
+          destinatario_id: recipientId,
+          mensaje: "El plan de mitigación está vencido.",
+        }),
+      );
     }
     for (const action of overdueActions) {
-      alerts.push({
-        regla_codigo: "AL-02",
-        severidad: "alta",
-        accion_id: action.id,
-        destinatario_id: action.responsable_id,
-        mensaje: "La acción de mitigación está vencida.",
-      });
+      const unitId = action.planes_mitigacion.riesgos.unidad_id;
+      addAlerts(
+        recipientIds(
+          [action.responsable_id],
+          analystsByUnit.get(unitId) ?? [],
+        ),
+        (recipientId) => ({
+          regla_codigo: "AL-02",
+          severidad: "alta",
+          accion_id: action.id,
+          destinatario_id: recipientId,
+          mensaje: "La acción de mitigación está vencida.",
+        }),
+      );
     }
 
     // AL-03: hallazgo crítico sin respuesta.
     for (const finding of criticalFindings) {
-      alerts.push({
-        regla_codigo: "AL-03",
-        severidad: "critica",
-        hallazgo_id: finding.id,
-        destinatario_id:
-          finding.responsable_id ?? finding.auditorias.responsable_id,
-        mensaje: "Existe un hallazgo crítico que todavía no tiene respuesta.",
-      });
+      addAlerts(
+        recipientIds(
+          [
+            finding.responsable_id,
+            finding.auditorias.responsable_id,
+          ],
+          managers,
+        ),
+        (recipientId) => ({
+          regla_codigo: "AL-03",
+          severidad: "critica",
+          hallazgo_id: finding.id,
+          destinatario_id: recipientId,
+          mensaje:
+            "Existe un hallazgo crítico vencido que todavía no tiene respuesta.",
+        }),
+      );
     }
 
     // AL-04: requisito evaluado como no conforme.
     for (const evaluation of nonCompliantEvaluations) {
       if (!evaluation.responsable_plan_id) continue;
-      alerts.push({
-        regla_codigo: "AL-04",
-        severidad: "alta",
-        evaluacion_id: evaluation.id,
-        destinatario_id: evaluation.responsable_plan_id,
-        mensaje: "La evaluación no conforme requiere seguimiento del plan de acción.",
-      });
+      addAlerts(
+        recipientIds(
+          [evaluation.responsable_plan_id],
+          complianceByUnit.get(evaluation.unidad_id) ?? [],
+        ),
+        (recipientId) => ({
+          regla_codigo: "AL-04",
+          severidad: "alta",
+          evaluacion_id: evaluation.id,
+          destinatario_id: recipientId,
+          mensaje:
+            "La evaluación no conforme requiere seguimiento del plan de acción.",
+        }),
+      );
     }
 
     // AL-05: normativa o requisito próximo a vencer.
@@ -168,18 +282,24 @@ export class AlertEngineService {
     // AL-06: riesgo crítico sin propietario o sin plan activo.
     for (const risk of risks) {
       if (
-        risk.nivel_residual.toNumber() < DEFAULT_CRITICAL_MINIMUM ||
+        classifyRiskLevel(
+          risk.nivel_residual.toNumber(),
+          criticalityRanges,
+        ) !== "critical" ||
         (risk.propietario_id && risk.planes_mitigacion.length > 0)
       ) {
         continue;
       }
-      alerts.push({
-        regla_codigo: "AL-06",
-        severidad: "critica",
-        riesgo_id: risk.id,
-        destinatario_id: risk.propietario_id ?? risk.creado_por,
-        mensaje: `El riesgo crítico ${risk.codigo} no tiene propietario o plan activo.`,
-      });
+      addAlerts(
+        recipientIds([], [...administrators, ...managers]),
+        (recipientId) => ({
+          regla_codigo: "AL-06",
+          severidad: "critica",
+          riesgo_id: risk.id,
+          destinatario_id: recipientId,
+          mensaje: `El riesgo crítico ${risk.codigo} no tiene propietario o plan activo.`,
+        }),
+      );
     }
 
     // AL-07: control clave cuya efectividad se redujo en el último cambio.
@@ -202,13 +322,19 @@ export class AlertEngineService {
       ) {
         continue;
       }
-      alerts.push({
-        regla_codigo: "AL-07",
-        severidad: "alta",
-        control_id: control.id,
-        destinatario_id: control.riesgos.propietario_id,
-        mensaje: `La efectividad de un control clave del riesgo ${control.riesgos.codigo} se redujo de ${previous}% a ${current}%.`,
-      });
+      addAlerts(
+        recipientIds(
+          [control.riesgos.propietario_id],
+          analystsByUnit.get(control.riesgos.unidad_id) ?? [],
+        ),
+        (recipientId) => ({
+          regla_codigo: "AL-07",
+          severidad: "alta",
+          control_id: control.id,
+          destinatario_id: recipientId,
+          mensaje: `La efectividad de un control clave del riesgo ${control.riesgos.codigo} se redujo de ${previous}% a ${current}%.`,
+        }),
+      );
     }
 
     const created = await this.repository.createManyAlerts(alerts);

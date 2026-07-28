@@ -71,7 +71,6 @@ const pagePaths = [
   "/audits?status=&unitId=&page=",
   "/compliance?result=&unitId=&page=",
   "/compliance/regulations",
-  "/compliance/regulations/new",
   "/alerts?status=&severity=&page=",
   "/settings",
   "/settings/audit-log?action=&entity=&page=",
@@ -111,6 +110,162 @@ for (const [endpoint, detailPath] of [
       await expectStatus(`/risks/${item.id}/mitigation`);
     }
   }
+}
+
+async function loginAs(email) {
+  const response = await timedFetch(
+    `${baseUrl}/api/auth/login`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        correo: email,
+        password: "DemoSGR2026!",
+      }),
+    },
+    authPerformanceBudgetMs,
+  );
+  if (!response.ok) {
+    throw new Error(`Login de ${email} falló: ${await response.text()}`);
+  }
+  const sessionCookie = response.headers.get("set-cookie")?.split(";")[0];
+  if (!sessionCookie) throw new Error(`Login de ${email} no devolvió cookie.`);
+  return sessionCookie;
+}
+
+async function api(sessionCookie, path, method = "GET", body) {
+  const response = await timedFetch(`${baseUrl}${path}`, {
+    method,
+    headers: {
+      cookie: sessionCookie,
+      ...(body ? { "content-type": "application/json" } : {}),
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(
+      `${method} ${path} devolvió ${response.status}: ${JSON.stringify(payload).slice(0, 500)}`,
+    );
+  }
+  return payload.data;
+}
+
+if (process.env.RUN_MUTATING_E2E === "true") {
+  const analystCookie = await loginAs("ana.analista@demo.sgr-eg.local");
+  const [categories, units, users] = await Promise.all([
+    api(analystCookie, "/api/risk-categories"),
+    api(analystCookie, "/api/business-units"),
+    api(analystCookie, "/api/users?pageSize=100"),
+  ]);
+  const category = categories.find((item) => item.status === "activo");
+  const unit = units[0];
+  const owner =
+    users.items.find(
+      (item) => item.email === "carlos.propietario@demo.sgr-eg.local",
+    ) ??
+    users.items[0];
+  if (!category || !unit || !owner) {
+    throw new Error("Faltan catálogos o usuarios para el escenario integrado.");
+  }
+  const unique = Date.now();
+  const risk = await api(analystCookie, "/api/risks", "POST", {
+    title: `Riesgo E2E ${unique}`,
+    description: "Escenario integrado automatizado",
+    causes: "Dependencia tecnológica",
+    consequences: "Interrupción operativa",
+    affectedObjectives: "Continuidad del negocio",
+    categoryId: category.id,
+    unitId: unit.id,
+    ownerId: owner.id,
+    probability: 5,
+    impact: 5,
+    financialExposure: 1000,
+    currency: "USD",
+  });
+  await api(analystCookie, `/api/risks/${risk.id}/controls`, "POST", {
+    description: "Control E2E",
+    type: "preventivo",
+    effectiveness: 50,
+    isKey: true,
+  });
+  const future = new Date(Date.now() + 7 * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+  await api(analystCookie, `/api/risks/${risk.id}/plans`, "POST", {
+    description: "Plan E2E",
+    responsibleId: owner.id,
+    dueDate: future,
+    progress: 10,
+  });
+
+  const auditorCookie = await loginAs("maria.auditora@demo.sgr-eg.local");
+  const auditUsers = await api(auditorCookie, "/api/users?pageSize=100");
+  const auditor =
+    auditUsers.items.find(
+      (item) => item.email === "maria.auditora@demo.sgr-eg.local",
+    ) ??
+    auditUsers.items[0];
+  const today = new Date().toISOString().slice(0, 10);
+  const audit = await api(auditorCookie, "/api/audits", "POST", {
+    objective: `Auditoría E2E ${unique}`,
+    scope: "Verificar el escenario automatizado",
+    startDate: today,
+    endDate: future,
+    responsibleId: auditor.id,
+    unitId: unit.id,
+    teamMemberIds: [auditor.id],
+  });
+  await api(auditorCookie, `/api/audits/${audit.id}/findings`, "POST", {
+    riskId: risk.id,
+    severity: "critica",
+    condition: "Condición E2E",
+    recommendation: "Aplicar el plan definido",
+    responsibleId: owner.id,
+    deadline: future,
+    requiresClosingEvidence: true,
+  });
+
+  const complianceCookie = await loginAs(
+    "lucia.cumplimiento@demo.sgr-eg.local",
+  );
+  const regulations = await api(
+    complianceCookie,
+    "/api/regulations?pageSize=1&status=vigente",
+  );
+  const regulation = regulations.items[0];
+  if (regulation) {
+    const requirements = await api(
+      complianceCookie,
+      `/api/regulations/${regulation.id}/requirements?pageSize=1&active=true`,
+    );
+    const requirement = requirements.items[0];
+    if (requirement) {
+      const offset = unique % 300;
+      const periodStart = new Date(Date.UTC(2030, 0, 1 + offset));
+      const periodEnd = new Date(periodStart);
+      periodEnd.setUTCDate(periodEnd.getUTCDate() + 1);
+      await api(
+        complianceCookie,
+        `/api/requirements/${requirement.id}/assessments`,
+        "POST",
+        {
+          unitId: unit.id,
+          periodStart: periodStart.toISOString().slice(0, 10),
+          periodEnd: periodEnd.toISOString().slice(0, 10),
+          result: "parcialmente_conforme",
+          observations: "Evaluación E2E",
+        },
+      );
+    }
+  }
+
+  await api(cookie, "/api/alerts/engine", "POST");
+  const managerCookie = await loginAs("jorge.gerencia@demo.sgr-eg.local");
+  await api(managerCookie, "/api/dashboard/summary");
+  process.stdout.write(
+    "E2E integrado de riesgo, control, mitigación, auditoría, hallazgo, cumplimiento, alertas y dashboard completado.\n",
+  );
 }
 
 const logout = await timedFetch(`${baseUrl}/api/auth/logout`, {

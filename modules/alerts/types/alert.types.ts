@@ -20,6 +20,14 @@ export interface AlertSummary {
   status: estado_alerta;
   generatedAt: Date;
   attendedAt: Date | null;
+  canUpdate: boolean;
+  history: Array<{
+    id: string;
+    event: string;
+    comment: string;
+    createdAt: Date;
+    user: { id: string; name: string };
+  }>;
 }
 
 export interface PaginatedAlerts {
@@ -29,4 +37,5 @@ export interface PaginatedAlerts {
   total: number;
   totalPages: number;
   unreadCount: number;
+  viewScope: "global" | "unit" | "personal";
 }

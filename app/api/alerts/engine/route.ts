@@ -12,8 +12,9 @@ export async function POST(request: NextRequest) {
   try {
     const principal = await requireAuthentication(request);
     
-    // Only users with write access to configuration or global scope can trigger the engine manually
-    authService.assertAllowed(principal, "alertas", "update");
+    // La ejecución manual es una operación administrativa de configuración.
+    // La atención de alertas conserva su alcance propio/unidad.
+    authService.assertAllowed(principal, "organizacion", "update");
 
     const result = await alertEngineService.runEngine();
 

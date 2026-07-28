@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
+import { postgresTool } from "./postgres-tools.ts";
 
 const connectionUrl = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
 const input = process.argv[2];
@@ -23,7 +24,8 @@ if (
 if (!existsSync(source)) {
   throw new Error("El archivo de respaldo no existe.");
 }
-const verification = spawnSync("pg_restore", ["--list", source], {
+const pgRestore = postgresTool("pg_restore");
+const verification = spawnSync(pgRestore, ["--list", source], {
   stdio: "inherit",
 });
 if (verification.status !== 0) {
@@ -39,7 +41,7 @@ if (verification.status !== 0) {
   throw new Error("El archivo no es un respaldo PostgreSQL válido.");
 }
 const result = spawnSync(
-  "pg_restore",
+  pgRestore,
   ["--exit-on-error", "--no-owner", "--dbname", connectionUrl, source],
   { stdio: "inherit" },
 );
