@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
+import { FormSection } from "@/components/ui/form-section";
 import type { BusinessUnitOption } from "@/modules/business-units/types/business-unit.types";
 import type {
   AuditSummary,
@@ -89,10 +90,15 @@ export function AuditForm({
 
   return (
     <form
-      className="grid gap-4 border-b border-slate-200 bg-slate-50 p-6 md:grid-cols-2 xl:grid-cols-3"
+      className="space-y-6 border-b border-slate-200 bg-slate-50 p-4 sm:p-6"
       onSubmit={handleSubmit(submit)}
       noValidate
     >
+      <FormSection
+        title="Alcance de la auditoría"
+        description="Define qué se auditará y a qué unidad corresponde."
+        columns={3}
+      >
       <FormField
         id="audit-objective"
         label="Objetivo"
@@ -126,6 +132,13 @@ export function AuditForm({
           {...register("scope")}
         />
       </FormField>
+      </FormSection>
+
+      <FormSection
+        title="Responsables y calendario"
+        description="Asigna al responsable, conforma el equipo y establece las fechas previstas."
+        columns={3}
+      >
       <FormField
         id="audit-responsible"
         label="Responsable"
@@ -175,7 +188,8 @@ export function AuditForm({
           ))}
         </select>
       </FormField>
-      <div className="flex flex-col justify-end gap-3 xl:col-span-2 xl:items-end">
+      </FormSection>
+      <div className="form-actions -mx-4 -mb-4 sm:-mx-6 sm:-mb-6">
         {feedback && (
           <p
             className={
@@ -197,7 +211,11 @@ export function AuditForm({
           ) : (
             <ClipboardPlus aria-hidden="true" className="size-4" />
           )}
-          {audit ? "Guardar cambios" : "Planificar auditoría"}
+          {isSubmitting
+            ? "Guardando auditoría..."
+            : audit
+              ? "Guardar cambios"
+              : "Planificar auditoría"}
         </Button>
       </div>
     </form>

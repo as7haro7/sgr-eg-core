@@ -17,6 +17,23 @@ import {
 } from "@/modules/risks/validators/risk.validator";
 import type { ApiResponse } from "@/types/api-response";
 
+const transitionHelp: Partial<Record<estado_riesgo, string>> = {
+  en_evaluacion:
+    "Indica que el riesgo está siendo analizado y valorado.",
+  abierto:
+    "Confirma que el riesgo fue evaluado y requiere una decisión.",
+  en_tratamiento:
+    "Úsalo cuando ya existen controles o un plan de mitigación en ejecución.",
+  monitoreo:
+    "Indica que el tratamiento terminó y el riesgo está bajo seguimiento.",
+  aceptado:
+    "Registra la aprobación formal de Gerencia, junto con su justificación y próxima revisión.",
+  cerrado:
+    "Finaliza el riesgo cuando ya no requiere tratamiento ni seguimiento.",
+  cancelado:
+    "Descarta el riesgo cuando dejó de aplicar o fue registrado por error.",
+};
+
 export function RiskTransitionForm({
   onSuccess,
   riskId,
@@ -86,9 +103,21 @@ export function RiskTransitionForm({
             </option>
           ))}
         </select>
+        {destination && transitionHelp[destination] && (
+          <p className="rounded-lg bg-blue-50 px-3 py-2 text-xs leading-5 text-blue-900">
+            {transitionHelp[destination]}
+          </p>
+        )}
       </div>
       {destination === "aceptado" && (
         <>
+          <div
+            className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-950"
+            role="note"
+          >
+            Esta acción confirma la aceptación en nombre de Gerencia y
+            registra tu usuario como aprobador.
+          </div>
           <div className="space-y-2">
             <label className="text-sm font-medium" htmlFor="acceptance-justification">
               Justificación
@@ -108,7 +137,7 @@ export function RiskTransitionForm({
       {message && <p className="text-sm text-slate-600">{message}</p>}
       <Button type="submit" disabled={isSubmitting}>
         {isSubmitting && <LoaderCircle className="size-4 animate-spin" />}
-        Cambiar estado
+        {isSubmitting ? "Guardando cambio..." : "Cambiar estado"}
       </Button>
     </form>
   );

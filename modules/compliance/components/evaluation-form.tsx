@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
+import { FormSection } from "@/components/ui/form-section";
 import {
   evaluationResultLabels,
   evaluationResults,
@@ -100,10 +101,14 @@ export function EvaluationForm({
 
   return (
     <form
-      className="grid gap-5 bg-slate-50 p-6 md:grid-cols-2"
+      className="space-y-6 bg-slate-50 p-4 sm:p-6"
       onSubmit={handleSubmit(submit)}
       noValidate
     >
+      <FormSection
+        title="Contexto de la evaluación"
+        description="Selecciona el requisito, la unidad evaluada y el resultado obtenido."
+      >
       <FormField
         id="evaluation-requirement"
         label="Requisito normativo"
@@ -135,6 +140,12 @@ export function EvaluationForm({
           ))}
         </select>
       </FormField>
+      </FormSection>
+
+      <FormSection
+        title="Periodo y observaciones"
+        description="Define el periodo cubierto y documenta la evidencia o criterio utilizado."
+      >
       <FormField
         id="evaluation-result"
         label="Resultado"
@@ -181,23 +192,32 @@ export function EvaluationForm({
           {...register("observations")}
         />
       </FormField>
+      </FormSection>
 
       {result === "no_aplicable" && (
-        <FormField
-          id="evaluation-not-applicable"
-          label="Justificación de no aplicabilidad"
-          error={errors.notApplicableJustification?.message}
-          className="md:col-span-2"
+        <FormSection
+          title="Justificación requerida"
+          description="Explica por qué este requisito no aplica a la unidad y periodo seleccionados."
+          columns={1}
         >
-          <textarea
-            className="form-input min-h-28 py-2"
-            {...register("notApplicableJustification")}
-          />
-        </FormField>
+          <FormField
+            id="evaluation-not-applicable"
+            label="Justificación de no aplicabilidad"
+            error={errors.notApplicableJustification?.message}
+          >
+            <textarea
+              className="form-input min-h-28 py-2"
+              {...register("notApplicableJustification")}
+            />
+          </FormField>
+        </FormSection>
       )}
 
       {result === "no_conforme" && (
-        <>
+        <FormSection
+          title="Plan de acción obligatorio"
+          description="Define cómo se corregirá el incumplimiento, quién será responsable y hasta cuándo."
+        >
           <FormField
             id="evaluation-action-plan"
             label="Plan de acción"
@@ -237,10 +257,10 @@ export function EvaluationForm({
               {...register("planDeadline")}
             />
           </FormField>
-        </>
+        </FormSection>
       )}
 
-      <div className="flex flex-col gap-3 md:col-span-2 md:items-end">
+      <div className="form-actions -mx-4 -mb-4 sm:-mx-6 sm:-mb-6">
         {feedback && (
           <p className="text-sm text-red-700" role="alert">
             {feedback}
@@ -262,7 +282,11 @@ export function EvaluationForm({
           ) : (
             <ClipboardPlus aria-hidden="true" className="size-4" />
           )}
-          {evaluation ? "Guardar cambios" : "Registrar evaluación"}
+          {isSubmitting
+            ? "Guardando evaluación..."
+            : evaluation
+              ? "Guardar cambios"
+              : "Registrar evaluación"}
         </Button>
       </div>
     </form>

@@ -8,6 +8,7 @@ import { useForm, useWatch } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
+import { FormSection } from "@/components/ui/form-section";
 import { StatusBadge } from "@/components/ui/status-badge";
 import type { BusinessUnitOption } from "@/modules/business-units/types/business-unit.types";
 import type { RiskCategorySummary } from "@/modules/risks/types/risk-configuration.types";
@@ -198,10 +199,15 @@ export function RiskForm({
 
   return (
     <form
-      className="grid gap-5 border-b border-slate-200 p-6 md:grid-cols-2 xl:grid-cols-3"
+      className="space-y-6 border-b border-slate-200 bg-slate-50 p-4 sm:p-6"
       onSubmit={handleSubmit(onSubmit)}
       noValidate
     >
+      <FormSection
+        title="Identificación"
+        description="Describe el riesgo y ubícalo en la categoría y unidad correspondientes."
+        columns={3}
+      >
       <FormField
         id="risk-title"
         label="Título"
@@ -241,13 +247,20 @@ export function RiskForm({
         id="risk-description"
         label="Descripción"
         error={errors.description?.message}
-        className="md:col-span-2"
+        className="md:col-span-2 xl:col-span-3"
       >
         <textarea
           className="form-input min-h-24 py-2"
           {...register("description")}
         />
       </FormField>
+      </FormSection>
+
+      <FormSection
+        title="Análisis cualitativo"
+        description="Explica qué origina el riesgo, qué podría ocurrir y qué objetivos se verían afectados."
+        columns={3}
+      >
       <FormField
         id="risk-causes"
         label="Causas"
@@ -278,6 +291,13 @@ export function RiskForm({
           {...register("affectedObjectives")}
         />
       </FormField>
+      </FormSection>
+
+      <FormSection
+        title="Responsabilidad y valoración"
+        description="Asigna un propietario y estima probabilidad, impacto y exposición financiera."
+        columns={3}
+      >
       <FormField
         id="risk-owner"
         label="Propietario"
@@ -351,10 +371,11 @@ export function RiskForm({
           />
         </FormField>
       </div>
+      </FormSection>
 
       <RiskPreview state={preview} isExistingRisk={Boolean(risk)} />
 
-      <div className="flex flex-col justify-end gap-3 md:col-span-2 xl:col-span-3 xl:items-end">
+      <div className="form-actions -mx-4 -mb-4 sm:-mx-6 sm:-mb-6">
         {feedback && (
           <p
             className={
@@ -377,7 +398,11 @@ export function RiskForm({
           {isSubmitting && (
             <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
           )}
-          {risk ? "Guardar cambios" : "Registrar riesgo"}
+          {isSubmitting
+            ? "Guardando riesgo..."
+            : risk
+              ? "Guardar cambios"
+              : "Registrar riesgo"}
         </Button>
       </div>
     </form>

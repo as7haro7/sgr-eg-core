@@ -13,6 +13,7 @@ function principal(scope: "global" | "unidad" | "propio" | "asignado"): AuthPrin
     name: "Prueba",
     email: "test@example.com",
     roleIds: [],
+    roleNames: [],
     unitIds: [UNIT],
     primaryUnitId: UNIT,
     mustChangePassword: false,

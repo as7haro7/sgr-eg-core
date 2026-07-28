@@ -9,8 +9,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
+import { GlobalActivityIndicator } from "@/components/ui/global-activity-indicator";
 import { cn } from "@/lib/utils";
 import { LogoutButton } from "@/modules/auth/components/logout-button";
 import type { AuthPrincipal } from "@/modules/auth/types/auth.types";
@@ -96,10 +97,25 @@ export function AppShell({
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
   const mobileCloseButtonRef = useRef<HTMLButtonElement>(null);
   const mobilePanelRef = useRef<HTMLElement>(null);
   const mobileWasOpen = useRef(false);
+  const navigationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+
+  const beginNavigation = useCallback(() => {
+    setIsNavigating(true);
+    if (navigationTimerRef.current) {
+      clearTimeout(navigationTimerRef.current);
+    }
+    navigationTimerRef.current = setTimeout(
+      () => setIsNavigating(false),
+      15_000,
+    );
+  }, []);
 
   useEffect(() => {
     setDesktopCollapsed(
@@ -109,7 +125,55 @@ export function AppShell({
 
   useEffect(() => {
     setMobileOpen(false);
+    setIsNavigating(false);
+    if (navigationTimerRef.current) {
+      clearTimeout(navigationTimerRef.current);
+      navigationTimerRef.current = null;
+    }
   }, [pathname]);
+
+  useEffect(() => {
+    const handleInternalLink = (event: MouseEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return;
+      }
+      const anchor = (event.target as Element | null)?.closest(
+        "a[href]",
+      ) as HTMLAnchorElement | null;
+      if (
+        !anchor ||
+        anchor.target === "_blank" ||
+        anchor.hasAttribute("download")
+      ) {
+        return;
+      }
+      const destination = new URL(anchor.href, window.location.href);
+      if (
+        destination.origin !== window.location.origin ||
+        destination.href === window.location.href ||
+        (destination.pathname === window.location.pathname &&
+          destination.search === window.location.search &&
+          destination.hash)
+      ) {
+        return;
+      }
+      beginNavigation();
+    };
+    document.addEventListener("click", handleInternalLink);
+    return () => {
+      document.removeEventListener("click", handleInternalLink);
+      if (navigationTimerRef.current) {
+        clearTimeout(navigationTimerRef.current);
+      }
+    };
+  }, [beginNavigation]);
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -169,6 +233,7 @@ export function AppShell({
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <GlobalActivityIndicator navigating={isNavigating} />
       <a
         href="#contenido-principal"
         className="fixed top-2 left-2 z-50 -translate-y-20 rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white transition-transform focus:translate-y-0"
@@ -200,6 +265,7 @@ export function AppShell({
         <Navigation
           items={navigation}
           pathname={pathname}
+          onNavigate={beginNavigation}
           collapsed={desktopCollapsed}
           unreadAlertsCount={unreadAlertsCount}
         />
@@ -263,7 +329,10 @@ export function AppShell({
             <Navigation
               items={navigation}
               pathname={pathname}
-              onNavigate={() => setMobileOpen(false)}
+              onNavigate={() => {
+                setMobileOpen(false);
+                beginNavigation();
+              }}
               unreadAlertsCount={unreadAlertsCount}
             />
           </aside>

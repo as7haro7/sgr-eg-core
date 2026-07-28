@@ -13,9 +13,11 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import type { DashboardArea } from "@/modules/dashboard/types/dashboard-profile";
 import type { DashboardSummary } from "@/modules/dashboard/types/dashboard.types";
 
 interface DashboardChartsProps {
+  areas: DashboardArea[];
   summary: DashboardSummary;
 }
 
@@ -26,7 +28,9 @@ const RISK_COLORS = {
   Crítico: "#991b1b",
 };
 
-export function DashboardCharts({ summary }: DashboardChartsProps) {
+export function DashboardCharts({ areas, summary }: DashboardChartsProps) {
+  const showRisks = areas.includes("risks");
+  const showControls = areas.includes("mitigation");
   const pieData = summary.riskDistribution.map((d) => ({
     name: d.level,
     value: d.count,
@@ -68,8 +72,10 @@ export function DashboardCharts({ summary }: DashboardChartsProps) {
 
   return (
     <div className="space-y-6">
+      {(showRisks || showControls) && (
       <div className="grid gap-6 lg:grid-cols-2">
       {/* Gráfico de Distribución de Riesgos */}
+      {showRisks && (
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h3 className="text-base font-bold text-slate-950">
           Distribución de Riesgos por Nivel
@@ -108,8 +114,10 @@ export function DashboardCharts({ summary }: DashboardChartsProps) {
           )}
         </div>
       </section>
+      )}
 
       {/* Gráfico de Efectividad de Controles */}
+      {showControls && (
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h3 className="text-base font-bold text-slate-950">
           Efectividad de Controles
@@ -135,9 +143,12 @@ export function DashboardCharts({ summary }: DashboardChartsProps) {
           </ResponsiveContainer>
         </div>
       </section>
+      )}
       </div>
+      )}
 
       {/* Matriz de Calor */}
+      {showRisks && (
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h3 className="text-base font-bold text-slate-950 mb-2">
           Matriz de Riesgos (Matriz de Calor)
@@ -173,6 +184,7 @@ export function DashboardCharts({ summary }: DashboardChartsProps) {
           </div>
         </div>
       </section>
+      )}
     </div>
   );
 }

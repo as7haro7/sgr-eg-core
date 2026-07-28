@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut } from "lucide-react";
+import { LoaderCircle, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -23,7 +23,11 @@ export function LogoutButton() {
 
   return (
     <Button variant="secondary" onClick={logout} disabled={isPending}>
-      <LogOut aria-hidden="true" className="size-4" />
+      {isPending ? (
+        <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+      ) : (
+        <LogOut aria-hidden="true" className="size-4" />
+      )}
       {isPending ? "Cerrando..." : "Cerrar sesión"}
     </Button>
   );

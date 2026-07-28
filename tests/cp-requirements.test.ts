@@ -27,6 +27,7 @@ function principal(): AuthPrincipal {
     name: "Usuario de prueba",
     email: "test@example.com",
     roleIds: [],
+    roleNames: [],
     unitIds: [UNIT_ID],
     primaryUnitId: UNIT_ID,
     mustChangePassword: false,

@@ -8,14 +8,19 @@ import {
   FileWarning,
 } from "lucide-react";
 import type { DashboardSummary } from "@/modules/dashboard/types/dashboard.types";
+import type { DashboardArea } from "@/modules/dashboard/types/dashboard-profile";
 
 interface DashboardKPIsProps {
+  areas: DashboardArea[];
   summary: DashboardSummary;
 }
 
-export function DashboardKPIs({ summary }: DashboardKPIsProps) {
+export function DashboardKPIs({ areas, summary }: DashboardKPIsProps) {
+  const shows = (area: DashboardArea) => areas.includes(area);
+
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {shows("risks") && (
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex items-center gap-4">
           <div className="flex size-12 items-center justify-center rounded-xl bg-red-50 text-red-600">
@@ -29,7 +34,9 @@ export function DashboardKPIs({ summary }: DashboardKPIsProps) {
           </div>
         </div>
       </div>
+      )}
 
+      {shows("compliance") && (
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex items-center gap-4">
           <div className="flex size-12 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
@@ -48,7 +55,9 @@ export function DashboardKPIs({ summary }: DashboardKPIsProps) {
           <span className="font-semibold text-slate-950">{summary.compliance.nonCompliant}</span> no conformes
         </div>
       </div>
+      )}
 
+      {shows("audits") && (
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex items-center gap-4">
           <div className="flex size-12 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
@@ -67,7 +76,9 @@ export function DashboardKPIs({ summary }: DashboardKPIsProps) {
           <span className="font-semibold text-green-600">{summary.findings.closed}</span> cerrados
         </div>
       </div>
+      )}
 
+      {shows("alerts") && (
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex items-center gap-4">
           <div className="flex size-12 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
@@ -81,25 +92,33 @@ export function DashboardKPIs({ summary }: DashboardKPIsProps) {
           </div>
         </div>
       </div>
+      )}
 
+      {shows("risks") && (
       <Kpi
         icon={<Target className="size-6" />}
         label="Sobre apetito"
         value={summary.risksOverAppetite}
         tone="text-red-700 bg-red-50"
       />
+      )}
+      {shows("mitigation") && (
       <Kpi
         icon={<AlarmClock className="size-6" />}
         label="Mitigaciones vencidas"
         value={summary.overdueMitigationItems}
         tone="text-amber-700 bg-amber-50"
       />
+      )}
+      {shows("mitigation") && (
       <Kpi
         icon={<ChartNoAxesCombined className="size-6" />}
         label="Avance de mitigación"
         value={`${Math.round(summary.mitigationProgress)}%`}
         tone="text-blue-700 bg-blue-50"
       />
+      )}
+      {shows("alerts") && (
       <Kpi
         icon={<AlarmClock className="size-6" />}
         label="Atención promedio"
@@ -110,6 +129,8 @@ export function DashboardKPIs({ summary }: DashboardKPIsProps) {
         }
         tone="text-violet-700 bg-violet-50"
       />
+      )}
+      {shows("audits") && (
       <Kpi
         icon={<ClipboardCheck className="size-6" />}
         label="Cobertura de auditoría"
@@ -117,6 +138,7 @@ export function DashboardKPIs({ summary }: DashboardKPIsProps) {
         detail={`${summary.auditCoverage.auditedUnits} de ${summary.auditCoverage.plannedUnits} unidades`}
         tone="text-emerald-700 bg-emerald-50"
       />
+      )}
     </div>
   );
 }

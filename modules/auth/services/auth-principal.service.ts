@@ -16,6 +16,7 @@ export function buildAuthPrincipal(user: AuthUserRecord): AuthPrincipal {
     name: user.nombre,
     email: user.correo,
     roleIds: activeRoles.map((role) => role.id),
+    roleNames: activeRoles.map((role) => role.nombre),
     unitIds: activeUnits.map(({ unidad_id }) => unidad_id),
     primaryUnitId:
       activeUnits.find(({ es_principal }) => es_principal)?.unidad_id ?? null,

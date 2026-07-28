@@ -196,18 +196,33 @@ export class RiskService {
         assigneeIds: risk.propietario_id ? [risk.propietario_id] : [],
       },
     );
-    if (canUpdate) {
-      return transitions.map(({ destino }) => destino);
-    }
-    const isManagement = await this.repository.hasActiveRole(
-      principal.userId,
-      "gerencia",
+    const destinations = transitions.map(({ destino }) => destino);
+    const includesAcceptance = destinations.includes("aceptado");
+    const hasGlobalUpdate = principal.permissions.some(
+      (permission) =>
+        permission.module === "riesgos" &&
+        permission.canUpdate &&
+        permission.scope === "global",
     );
+    const isManagement =
+      includesAcceptance &&
+      (await this.repository.hasActiveRole(
+        principal.userId,
+        "gerencia",
+      ));
+
+    if (canUpdate) {
+      return hasGlobalUpdate || isManagement
+        ? destinations
+        : destinations.filter(
+            (destination) => destination !== "aceptado",
+          );
+    }
 
     return isManagement
-      ? transitions
-          .map(({ destino }) => destino)
-          .filter((destination) => destination === "aceptado")
+      ? destinations.filter(
+          (destination) => destination === "aceptado",
+        )
       : [];
   }
 

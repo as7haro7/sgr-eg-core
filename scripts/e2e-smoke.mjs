@@ -48,6 +48,11 @@ if (!session.ok) {
   throw new Error(`Consulta de sesión falló con ${session.status}.`);
 }
 
+// Calienta consultas agregadas y de alertas antes de medir el uso estable.
+// La primera apertura también puede preparar TLS y la conexión remota.
+await fetch(`${baseUrl}/`, { headers: { cookie } });
+await fetch(`${baseUrl}/alerts`, { headers: { cookie } });
+
 async function expectStatus(path, expected = 200) {
   const response = await timedFetch(`${baseUrl}${path}`, {
     headers: { cookie },
@@ -150,6 +155,121 @@ async function api(sessionCookie, path, method = "GET", body) {
   }
   return payload.data;
 }
+
+const roleScenarios = [
+  {
+    email: "admin.sgr@gmail.com",
+    role: "administrador",
+    showsAdministration: true,
+  },
+  {
+    email: "ana.analista@demo.sgr-eg.local",
+    role: "analista_riesgos",
+    showsAdministration: false,
+  },
+  {
+    email: "carlos.propietario@demo.sgr-eg.local",
+    role: "propietario_riesgo",
+    showsAdministration: false,
+  },
+  {
+    email: "maria.auditora@demo.sgr-eg.local",
+    role: "auditor_interno",
+    showsAdministration: false,
+  },
+  {
+    email: "lucia.cumplimiento@demo.sgr-eg.local",
+    role: "responsable_cumplimiento",
+    showsAdministration: false,
+  },
+  {
+    email: "jorge.gerencia@demo.sgr-eg.local",
+    role: "gerencia",
+    showsAdministration: false,
+  },
+  {
+    email: "diego.tecnico@demo.sgr-eg.local",
+    role: "equipo_tecnico",
+    showsAdministration: false,
+  },
+];
+
+for (const scenario of roleScenarios) {
+  const roleCookie =
+    scenario.email === "admin.sgr@gmail.com"
+      ? cookie
+      : await loginAs(scenario.email);
+  await fetch(`${baseUrl}/`, { headers: { cookie: roleCookie } });
+  await fetch(`${baseUrl}/alerts`, { headers: { cookie: roleCookie } });
+  const roleSession = await timedFetch(`${baseUrl}/api/auth/session`, {
+    headers: { cookie: roleCookie },
+  });
+  if (!roleSession.ok) {
+    throw new Error(`Sesión de ${scenario.email} devolvió ${roleSession.status}.`);
+  }
+  const rolePayload = await roleSession.json();
+  if (!rolePayload.data?.principal?.roleNames?.includes(scenario.role)) {
+    throw new Error(
+      `${scenario.email} no devolvió el rol esperado ${scenario.role}.`,
+    );
+  }
+
+  const home = await timedFetch(`${baseUrl}/`, {
+    headers: { cookie: roleCookie },
+  });
+  if (!home.ok) {
+    throw new Error(`Dashboard de ${scenario.email} devolvió ${home.status}.`);
+  }
+  const html = await home.text();
+  const administrationIsVisible =
+    html.includes("Usuarios y roles") ||
+    html.includes("Organización") ||
+    html.includes("Configuración");
+  if (administrationIsVisible !== scenario.showsAdministration) {
+    throw new Error(
+      `La navegación administrativa de ${scenario.email} no coincide con su rol.`,
+    );
+  }
+
+  const alerts = await timedFetch(`${baseUrl}/alerts`, {
+    headers: { cookie: roleCookie },
+  });
+  if (!alerts.ok) {
+    throw new Error(`Alertas de ${scenario.email} devolvió ${alerts.status}.`);
+  }
+  if (scenario.email !== "admin.sgr@gmail.com") {
+    const roleLogout = await timedFetch(`${baseUrl}/api/auth/logout`, {
+      method: "POST",
+      headers: { cookie: roleCookie },
+    });
+    if (!roleLogout.ok) {
+      throw new Error(
+        `Logout de ${scenario.email} devolvió ${roleLogout.status}.`,
+      );
+    }
+  }
+}
+
+const technicalCookie = await loginAs("diego.tecnico@demo.sgr-eg.local");
+const forbiddenRisks = await timedFetch(`${baseUrl}/api/risks?pageSize=1`, {
+  headers: { cookie: technicalCookie },
+});
+if (forbiddenRisks.status !== 403) {
+  throw new Error(
+    `Riesgos para Equipo técnico devolvió ${forbiddenRisks.status}; se esperaba 403.`,
+  );
+}
+const technicalLogout = await timedFetch(`${baseUrl}/api/auth/logout`, {
+  method: "POST",
+  headers: { cookie: technicalCookie },
+});
+if (!technicalLogout.ok) {
+  throw new Error(`Logout técnico devolvió ${technicalLogout.status}.`);
+}
+
+process.stdout.write(
+  "E2E de dashboard, navegación y alcance para los siete roles completado.\n",
+);
 
 if (process.env.RUN_MUTATING_E2E === "true") {
   const analystCookie = await loginAs("ana.analista@demo.sgr-eg.local");

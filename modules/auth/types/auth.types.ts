@@ -68,6 +68,7 @@ export interface AuthPrincipal {
   name: string;
   email: string;
   roleIds: string[];
+  roleNames: string[];
   unitIds: string[];
   primaryUnitId: string | null;
   permissions: AuthPermission[];

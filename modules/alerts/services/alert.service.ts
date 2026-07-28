@@ -168,6 +168,12 @@ export class AlertService {
     };
   }
 
+  async countUnread(principal: AuthPrincipal): Promise<number> {
+    return this.repository.countUnread(
+      buildAlertScopeWhere(principal, "read"),
+    );
+  }
+
   async attend(
     alertId: string,
     input: AttendAlertInput,

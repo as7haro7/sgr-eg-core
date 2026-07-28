@@ -8,6 +8,8 @@ import { DashboardRepository } from "@/modules/dashboard/repositories/dashboard.
 import type { DashboardFilter } from "@/modules/dashboard/validators/dashboard.validator";
 import type { RegulationRepository } from "@/modules/regulations/repositories/regulation.repository";
 import { RegulationService } from "@/modules/regulations/services/regulation.service";
+import type { RiskRepository } from "@/modules/risks/repositories/risk.repository";
+import { RiskService } from "@/modules/risks/services/risk.service";
 
 const USER_ID = "10000000-0000-4000-8000-000000000001";
 const UNIT_ID = "20000000-0000-4000-8000-000000000001";
@@ -15,7 +17,7 @@ const COUNTRY_ID = "30000000-0000-4000-8000-000000000001";
 const ROLE_ID = "40000000-0000-4000-8000-000000000001";
 
 function principal(
-  module: "alertas" | "cumplimiento",
+  module: "alertas" | "cumplimiento" | "riesgos",
   scope: "global" | "unidad" | "propio",
   actions: { read?: boolean; create?: boolean; update?: boolean },
 ): AuthPrincipal {
@@ -24,6 +26,7 @@ function principal(
     name: "Usuario de prueba",
     email: "usuario@demo.sgr-eg.local",
     roleIds: [ROLE_ID],
+    roleNames: [],
     unitIds: [UNIT_ID],
     primaryUnitId: UNIT_ID,
     mustChangePassword: false,
@@ -215,5 +218,34 @@ describe("Regresiones de bugs reportados", () => {
       ),
     ).rejects.toThrow("No tienes permiso");
     expect(repository.updateStatus).not.toHaveBeenCalled();
+  });
+
+  it("no muestra la aceptación de riesgos a un analista sin rol de Gerencia", async () => {
+    const repository = {
+      findById: vi.fn().mockResolvedValue({
+        id: "risk",
+        estado: "evaluado",
+        unidad_id: UNIT_ID,
+        creado_por: USER_ID,
+        propietario_id: USER_ID,
+      }),
+      listTransitions: vi.fn().mockResolvedValue([
+        { destino: "en_tratamiento" },
+        { destino: "aceptado" },
+      ]),
+      hasActiveRole: vi.fn().mockResolvedValue(false),
+    } as unknown as RiskRepository;
+    const service = new RiskService(repository);
+
+    const transitions = await service.listAvailableTransitions(
+      "risk",
+      principal("riesgos", "unidad", {
+        read: true,
+        update: true,
+      }),
+    );
+
+    expect(transitions).toEqual(["en_tratamiento"]);
+    expect(transitions).not.toContain("aceptado");
   });
 });

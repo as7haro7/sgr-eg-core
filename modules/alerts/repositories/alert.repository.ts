@@ -108,6 +108,16 @@ export class AlertRepository {
     return { items, total, unreadCount };
   }
 
+  countUnread(scopeWhere: Prisma.alertasWhereInput) {
+    return this.database.alertas.count({
+      where: {
+        estado: "pendiente",
+        deleted_at: null,
+        AND: [scopeWhere],
+      },
+    });
+  }
+
   findById(id: string) {
     return this.database.alertas.findFirst({
       where: { id, deleted_at: null },

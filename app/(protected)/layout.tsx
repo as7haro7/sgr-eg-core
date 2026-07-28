@@ -13,13 +13,13 @@ export default async function ProtectedLayout({
   children: React.ReactNode;
 }>) {
   const principal = await getApplicationPrincipal();
-  const unreadAlerts = await alertService.list({ page: 1, pageSize: 1, status: "pendiente" }, principal);
+  const unreadAlertsCount = await alertService.countUnread(principal);
 
   return (
     <AppShell
       navigation={getVisibleNavigation(principal)}
       principal={principal}
-      unreadAlertsCount={unreadAlerts.unreadCount}
+      unreadAlertsCount={unreadAlertsCount}
     >
       {children}
     </AppShell>

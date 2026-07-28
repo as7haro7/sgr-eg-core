@@ -6,7 +6,9 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { BusinessUnitService } from "@/modules/business-units/services/business-unit.service";
 import { DashboardCharts } from "@/modules/dashboard/components/dashboard-charts";
 import { DashboardKPIs } from "@/modules/dashboard/components/dashboard-kpis";
+import { DashboardWorkspace } from "@/modules/dashboard/components/dashboard-workspace";
 import { DashboardService } from "@/modules/dashboard/services/dashboard.service";
+import { getDashboardAreas } from "@/modules/dashboard/types/dashboard-profile";
 import { dashboardFilterSchema } from "@/modules/dashboard/validators/dashboard.validator";
 import { getApplicationPrincipal } from "@/modules/auth/services/current-principal.service";
 import {
@@ -87,6 +89,7 @@ export default async function Home({ searchParams }: HomePageProps) {
   const countries = Array.from(
     new Map(units.map((unit) => [unit.country.id, unit.country])).values(),
   );
+  const dashboardAreas = getDashboardAreas(principal);
 
   return (
     <div className="space-y-6">
@@ -109,6 +112,8 @@ export default async function Home({ searchParams }: HomePageProps) {
         </div>
       </section>
 
+      <DashboardWorkspace principal={principal} />
+
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-bold text-slate-950">
@@ -126,11 +131,11 @@ export default async function Home({ searchParams }: HomePageProps) {
         </div>
         <form
           method="get"
-          className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+          className="mt-5 grid gap-x-4 gap-y-5 sm:grid-cols-2 xl:grid-cols-4"
         >
-          <label className="grid gap-1 text-sm text-slate-700">
+          <label className="grid gap-2 text-sm font-medium text-slate-700">
             País
-            <select name="countryId" defaultValue={first(raw.countryId) ?? ""}>
+            <select className="form-input" name="countryId" defaultValue={first(raw.countryId) ?? ""}>
               <option value="">Todos los países</option>
               {countries.map((country) => (
                 <option key={country.id} value={country.id}>
@@ -139,9 +144,9 @@ export default async function Home({ searchParams }: HomePageProps) {
               ))}
             </select>
           </label>
-          <label className="grid gap-1 text-sm text-slate-700">
+          <label className="grid gap-2 text-sm font-medium text-slate-700">
             Unidad de negocio
-            <select name="unitId" defaultValue={first(raw.unitId) ?? ""}>
+            <select className="form-input" name="unitId" defaultValue={first(raw.unitId) ?? ""}>
               <option value="">Todas las unidades permitidas</option>
               {units.map((unit) => (
                 <option key={unit.id} value={unit.id}>
@@ -150,9 +155,9 @@ export default async function Home({ searchParams }: HomePageProps) {
               ))}
             </select>
           </label>
-          <label className="grid gap-1 text-sm text-slate-700">
+          <label className="grid gap-2 text-sm font-medium text-slate-700">
             Categoría
-            <select name="categoryId" defaultValue={first(raw.categoryId) ?? ""}>
+            <select className="form-input" name="categoryId" defaultValue={first(raw.categoryId) ?? ""}>
               <option value="">Todas las categorías</option>
               {categories
                 .filter(({ status }) => status === "activo")
@@ -163,9 +168,9 @@ export default async function Home({ searchParams }: HomePageProps) {
                 ))}
             </select>
           </label>
-          <label className="grid gap-1 text-sm text-slate-700">
+          <label className="grid gap-2 text-sm font-medium text-slate-700">
             Responsable
-            <select name="ownerId" defaultValue={first(raw.ownerId) ?? ""}>
+            <select className="form-input" name="ownerId" defaultValue={first(raw.ownerId) ?? ""}>
               <option value="">Todos los responsables</option>
               {owners.map((owner) => (
                 <option key={owner.id} value={owner.id}>
@@ -174,9 +179,9 @@ export default async function Home({ searchParams }: HomePageProps) {
               ))}
             </select>
           </label>
-          <label className="grid gap-1 text-sm text-slate-700">
+          <label className="grid gap-2 text-sm font-medium text-slate-700">
             Estado
-            <select name="status" defaultValue={first(raw.status) ?? ""}>
+            <select className="form-input" name="status" defaultValue={first(raw.status) ?? ""}>
               <option value="">Todos los estados</option>
               {riskStatuses.map((status) => (
                 <option key={status} value={status}>
@@ -185,17 +190,19 @@ export default async function Home({ searchParams }: HomePageProps) {
               ))}
             </select>
           </label>
-          <label className="grid gap-1 text-sm text-slate-700">
+          <label className="grid gap-2 text-sm font-medium text-slate-700">
             Desde
             <input
+              className="form-input"
               name="periodStart"
               type="date"
               defaultValue={first(raw.periodStart) ?? ""}
             />
           </label>
-          <label className="grid gap-1 text-sm text-slate-700">
+          <label className="grid gap-2 text-sm font-medium text-slate-700">
             Hasta
             <input
+              className="form-input"
               name="periodEnd"
               type="date"
               defaultValue={first(raw.periodEnd) ?? ""}
@@ -204,13 +211,13 @@ export default async function Home({ searchParams }: HomePageProps) {
           <div className="flex items-end gap-2">
             <button
               type="submit"
-              className="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800"
+              className="min-h-11 rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800"
             >
               Aplicar filtros
             </button>
             <Link
               href="/"
-              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700"
+              className="inline-flex min-h-11 items-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >
               Limpiar
             </Link>
@@ -218,8 +225,8 @@ export default async function Home({ searchParams }: HomePageProps) {
         </form>
       </section>
 
-      <DashboardKPIs summary={summary} />
-      <DashboardCharts summary={summary} />
+      <DashboardKPIs summary={summary} areas={dashboardAreas} />
+      <DashboardCharts summary={summary} areas={dashboardAreas} />
     </div>
   );
 }

@@ -61,6 +61,10 @@ La semilla usa exclusivamente información ficticia. Usuarios disponibles:
 
 Contraseña común: `DemoSGR2026!`.
 
+La ejecución manual de todos los procesos, permisos y ciclos de vida está
+documentada en
+[`GUIA_PRUEBAS_GLOBALES_POR_ROL.md`](./GUIA_PRUEBAS_GLOBALES_POR_ROL.md).
+
 ## Calidad y pruebas
 
 ```bash

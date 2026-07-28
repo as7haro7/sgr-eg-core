@@ -37,6 +37,7 @@ export interface NavigationItem {
   href: string;
   icon: NavigationIcon;
   module?: string;
+  visibility?: "read" | "manage";
 }
 
 export const navigationItems: readonly NavigationItem[] = [
@@ -69,18 +70,21 @@ export const navigationItems: readonly NavigationItem[] = [
     href: "/users",
     icon: "users",
     module: "usuarios",
+    visibility: "manage",
   },
   {
     label: "Organización",
     href: "/organization",
     icon: "organization",
     module: "organizacion",
+    visibility: "manage",
   },
   {
     label: "Configuración",
     href: "/settings",
     icon: "settings",
     module: "organizacion",
+    visibility: "manage",
   },
   {
     label: "Bitácora",
@@ -92,7 +96,7 @@ export const navigationItems: readonly NavigationItem[] = [
     label: "Alertas",
     href: "/alerts",
     icon: "alerts",
-    // Siempre visible
+    module: "alertas",
   },
 ] as const;
 
@@ -109,6 +113,19 @@ export function getVisibleNavigation(
   principal: AuthPrincipal,
 ): NavigationItem[] {
   return navigationItems.filter(
-    (item) => !item.module || canReadModule(principal, item.module),
+    (item) => {
+      if (!item.module) return true;
+      if (item.visibility !== "manage") {
+        return canReadModule(principal, item.module);
+      }
+
+      return principal.permissions.some(
+        (permission) =>
+          permission.module === item.module &&
+          (permission.canCreate ||
+            permission.canUpdate ||
+            permission.canDeactivate),
+      );
+    },
   );
 }

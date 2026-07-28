@@ -63,6 +63,101 @@ textarea {
   .surface-card {
     @apply rounded-2xl border border-slate-200 bg-white shadow-sm;
   }
+
+  .form-section {
+    @apply rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6;
+  }
+
+  .form-section-grid {
+    @apply mt-5 grid gap-x-5 gap-y-6 md:grid-cols-2;
+  }
+
+  .form-actions {
+    @apply sticky bottom-0 z-10 flex flex-col-reverse items-stretch gap-3 border-t border-slate-200 bg-white/95 p-4 backdrop-blur sm:flex-row sm:items-center sm:justify-end;
+  }
+}
+
+@keyframes activity-progress {
+  0% {
+    transform: translateX(-100%);
+    width: 28%;
+  }
+  50% {
+    width: 58%;
+  }
+  100% {
+    transform: translateX(360%);
+    width: 28%;
+  }
+}
+
+@keyframes activity-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes activity-pulse {
+  0%,
+  100% {
+    transform: scale(0.72);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes activity-arrive {
+  from {
+    transform: translateY(0.75rem) scale(0.96);
+    opacity: 0;
+  }
+}
+
+.activity-progress-bar {
+  width: 36%;
+  background: linear-gradient(90deg, #2563eb, #06b6d4, #8b5cf6, #2563eb);
+  background-size: 200% 100%;
+  box-shadow: 0 0 14px rgb(37 99 235 / 55%);
+  animation: activity-progress 1.05s ease-in-out infinite;
+}
+
+.activity-toast {
+  animation: activity-arrive 180ms ease-out;
+}
+
+.activity-orb {
+  position: relative;
+  display: inline-flex;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #dbeafe, #cffafe);
+}
+
+.activity-orb::before {
+  position: absolute;
+  width: 1.75rem;
+  height: 1.75rem;
+  content: "";
+  border-radius: 9999px;
+  border: 3px solid transparent;
+  border-top-color: #2563eb;
+  border-right-color: #06b6d4;
+  animation: activity-orbit 800ms linear infinite;
+}
+
+.activity-orb span {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: #4f46e5;
+  animation: activity-pulse 900ms ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
