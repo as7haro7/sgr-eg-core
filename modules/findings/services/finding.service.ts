@@ -106,6 +106,37 @@ export class FindingService {
     return (await this.repository.listByAudit(auditId)).map(mapFinding);
   }
 
+  async listWorkspace(
+    auditId: string,
+    principal: AuthPrincipal,
+  ): Promise<{
+    findings: FindingSummary[];
+    riskOptions: FindingRiskOption[];
+  }> {
+    const audit = await this.repository.findAudit(auditId);
+    if (!audit) throw auditNotFound();
+
+    this.authorization.assertAllowed(
+      principal,
+      "auditorias",
+      "read",
+      authorizationContext(audit),
+    );
+    const [findings, risks] = await Promise.all([
+      this.repository.listByAudit(auditId),
+      this.repository.listRiskOptions(audit.unidad_id),
+    ]);
+
+    return {
+      findings: findings.map(mapFinding),
+      riskOptions: risks.map((risk) => ({
+        id: risk.id,
+        code: risk.codigo,
+        title: risk.titulo,
+      })),
+    };
+  }
+
   async getById(
     findingId: string,
     principal: AuthPrincipal,

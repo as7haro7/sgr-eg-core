@@ -24,7 +24,6 @@ interface AppShellProps {
   children: React.ReactNode;
   navigation: NavigationItem[];
   principal: AuthPrincipal;
-  unreadAlertsCount?: number;
 }
 
 function isCurrentPath(pathname: string, href: string): boolean {
@@ -92,9 +91,11 @@ export function AppShell({
   children,
   navigation,
   principal,
-  unreadAlertsCount,
 }: AppShellProps) {
   const pathname = usePathname();
+  const [unreadAlertsCount, setUnreadAlertsCount] = useState<
+    number | undefined
+  >();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
@@ -122,6 +123,30 @@ export function AppShell({
       window.localStorage.getItem("sgr-eg-sidebar-collapsed") === "true",
     );
   }, []);
+
+  useEffect(() => {
+    if (!navigation.some(({ href }) => href === "/alerts")) return;
+
+    const controller = new AbortController();
+    fetch("/api/alerts/unread-count", {
+      signal: controller.signal,
+      cache: "no-store",
+    })
+      .then(async (response) => {
+        if (!response.ok) return;
+        const payload = (await response.json()) as {
+          data?: { count?: number };
+        };
+        if (typeof payload.data?.count === "number") {
+          setUnreadAlertsCount(payload.data.count);
+        }
+      })
+      .catch(() => {
+        // El contador es informativo y no debe bloquear la navegación.
+      });
+
+    return () => controller.abort();
+  }, [navigation, pathname]);
 
   useEffect(() => {
     setMobileOpen(false);

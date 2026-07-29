@@ -45,9 +45,10 @@ export default async function RiskDetailPage({
     : rawSection;
   const activeSection =
     requestedSection === "evidence" ? "evidence" : "summary";
-  const risk = await notFoundOnMissing(
-    riskService.getById(riskId, principal),
+  const detail = await notFoundOnMissing(
+    riskService.getDetail(riskId, principal),
   );
+  const { risk, transitions } = detail;
   const canUpdate = authorizationService.isAllowed(
     principal,
     "riesgos",
@@ -68,17 +69,16 @@ export default async function RiskDetailPage({
       assigneeIds: risk.owner ? [risk.owner.id] : [],
     },
   );
-  const [evidence, maxEvidenceFileSize] = await Promise.all([
-    evidenceService.list(
-      { entityType: "risk", entityId: risk.id },
-      principal,
-    ),
-    evidenceService.getMaxFileSize(),
-  ]);
-  const transitions = await riskService.listAvailableTransitions(
-    riskId,
-    principal,
-  );
+  const [evidence, maxEvidenceFileSize] =
+    activeSection === "evidence"
+      ? await Promise.all([
+          evidenceService.list(
+            { entityType: "risk", entityId: risk.id },
+            principal,
+          ),
+          evidenceService.getMaxFileSize(),
+        ])
+      : [[], 0];
 
   return (
     <div className="w-full">

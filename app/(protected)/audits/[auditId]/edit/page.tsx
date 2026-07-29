@@ -27,9 +27,8 @@ export default async function EditAuditPage({
   const parsed = auditIdSchema.safeParse((await params).auditId);
   if (!parsed.success) notFound();
   const audit = await notFoundOnMissing(
-    auditService.getById(parsed.data, principal),
+    auditService.getById(parsed.data, principal, "update"),
   );
-  await auditService.listAvailableTransitions(audit.id, principal);
   const [allUnits, users] = await Promise.all([
     businessUnitService.listActive(),
     auditService.listUserOptions(),

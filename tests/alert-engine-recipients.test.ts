@@ -46,11 +46,21 @@ describe("Destinatarios del motor AL-01", () => {
       findExpiringRegulations: vi.fn().mockResolvedValue([]),
       findExpiringRequirements: vi.fn().mockResolvedValue([]),
       findControlUpdateHistory: vi.fn().mockResolvedValue([]),
-      findRecipientsByRoles: vi.fn(
-        async (roles: string[], unitId?: string) => {
-          if (roles.includes("analista_riesgos") && unitId === "unit") {
-            return [{ id: "analyst" }];
+      findRecipientsByRolesForUnits: vi.fn(
+        async (roles: string[]) => {
+          if (roles.includes("analista_riesgos")) {
+            return [
+              {
+                id: "analyst",
+                usuario_unidades: [{ unidad_id: "unit" }],
+              },
+            ];
           }
+          return [];
+        },
+      ),
+      findRecipientsByRoles: vi.fn(
+        async (roles: string[]) => {
           if (roles.includes("gerencia")) return [{ id: "manager" }];
           if (roles.includes("administrador")) return [{ id: "admin" }];
           return [];

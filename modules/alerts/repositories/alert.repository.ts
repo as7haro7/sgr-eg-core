@@ -391,4 +391,39 @@ export class AlertRepository {
       select: { id: true },
     });
   }
+
+  findRecipientsByRolesForUnits(roleNames: string[], unitIds: string[]) {
+    if (unitIds.length === 0) return Promise.resolve([]);
+
+    return this.database.usuarios.findMany({
+      where: {
+        estado: "activo",
+        deleted_at: null,
+        usuario_roles: {
+          some: {
+            roles: {
+              nombre: { in: roleNames },
+              estado: "activo",
+            },
+          },
+        },
+        usuario_unidades: {
+          some: {
+            unidad_id: { in: unitIds },
+            unidades_negocio: { estado: "activo" },
+          },
+        },
+      },
+      select: {
+        id: true,
+        usuario_unidades: {
+          where: {
+            unidad_id: { in: unitIds },
+            unidades_negocio: { estado: "activo" },
+          },
+          select: { unidad_id: true },
+        },
+      },
+    });
+  }
 }

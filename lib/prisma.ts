@@ -13,6 +13,9 @@ if (!runtimeDatabaseUrl.searchParams.has("sslmode")) {
 const createPrismaClient = () => {
   const adapter = new PrismaPg({
     connectionString: runtimeDatabaseUrl.toString(),
+    max: 5,
+    idleTimeoutMillis: 30_000,
+    connectionTimeoutMillis: 10_000,
   });
 
   return new PrismaClient({ adapter });

@@ -26,6 +26,7 @@ model acciones_mitigacion {
   evidencias        evidencias[]
 
   @@index([fecha_limite, estado], map: "idx_acciones_vencimiento", where: raw("(deleted_at IS NULL)"))
+  @@index([plan_id, fecha_limite], map: "idx_acciones_plan", where: raw("(deleted_at IS NULL)"))
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -99,6 +100,7 @@ model auditoria_equipo {
   usuarios     usuarios   @relation(fields: [usuario_id], references: [id], onUpdate: NoAction)
 
   @@id([auditoria_id, usuario_id])
+  @@index([usuario_id, auditoria_id], map: "idx_auditoria_equipo_usuario")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -119,6 +121,8 @@ model auditorias {
   unidades_negocio unidades_negocio?  @relation(fields: [unidad_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
   evidencias       evidencias[]
   hallazgos        hallazgos[]
+
+  @@index([unidad_id, estado, fecha_inicio], map: "idx_auditorias_listado", where: raw("(deleted_at IS NULL)"))
 }
 
 model bitacora {
@@ -135,6 +139,7 @@ model bitacora {
 
   @@index([entidad, entidad_id, fecha], map: "idx_bitacora_consulta")
   @@index([usuario_id, fecha], map: "idx_bitacora_usuario_fecha")
+  @@index([fecha], map: "idx_bitacora_fecha")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -200,6 +205,7 @@ model evaluaciones_cumplimiento {
   evidencias                                                       evidencias[]
 
   @@unique([requisito_id, unidad_id, periodo_inicio, periodo_fin], map: "uq_evaluacion_periodo", where: raw("(deleted_at IS NULL)"))
+  @@index([unidad_id, resultado, periodo_inicio], map: "idx_evaluaciones_listado", where: raw("(deleted_at IS NULL)"))
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -265,6 +271,7 @@ model hallazgos {
   riesgos                                     riesgos?           @relation(fields: [riesgo_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
 
   @@index([estado, severidad, fecha_limite], map: "idx_hallazgos_seguimiento", where: raw("(deleted_at IS NULL)"))
+  @@index([auditoria_id, created_at], map: "idx_hallazgos_auditoria", where: raw("(deleted_at IS NULL)"))
 }
 
 model modulos {
@@ -292,6 +299,7 @@ model normativas {
   requisitos      requisitos[]
 
   @@unique([nombre, jurisdiccion, version])
+  @@index([estado, vigencia_fin], map: "idx_normativas_vigencia", where: raw("(deleted_at IS NULL)"))
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -348,6 +356,7 @@ model planes_mitigacion {
   riesgos             riesgos               @relation(fields: [riesgo_id], references: [id], onUpdate: NoAction)
 
   @@index([fecha_limite, estado], map: "idx_planes_vencimiento", where: raw("(deleted_at IS NULL)"))
+  @@index([riesgo_id, fecha_limite], map: "idx_planes_riesgo", where: raw("(deleted_at IS NULL)"))
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -381,6 +390,7 @@ model requisitos {
   other_requisitos          requisitos[]                @relation("requisitosTorequisitos")
 
   @@unique([normativa_id, codigo, version])
+  @@index([normativa_id, vigente, vigencia_fin], map: "idx_requisitos_normativa", where: raw("(deleted_at IS NULL)"))
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.

@@ -146,11 +146,12 @@ export class AuditService {
   async getById(
     auditId: string,
     principal: AuthPrincipal,
+    action: "read" | "update" = "read",
   ): Promise<AuditSummary> {
     const audit = await this.getAuthorizedAudit(
       auditId,
       principal,
-      "read",
+      action,
     );
 
     return mapAudit(audit);

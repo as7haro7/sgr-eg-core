@@ -104,6 +104,22 @@ export class EvidenceRepository {
     });
   }
 
+  listAuditFindings(auditId: string, findingIds: string[]) {
+    return this.database.evidencias.findMany({
+      where: {
+        hallazgo_id: { in: findingIds },
+        deleted_at: null,
+        hallazgos: {
+          auditoria_id: auditId,
+          deleted_at: null,
+          auditorias: { deleted_at: null },
+        },
+      },
+      select: evidenceSelect,
+      orderBy: [{ created_at: "desc" }, { id: "desc" }],
+    });
+  }
+
   create(data: Prisma.evidenciasUncheckedCreateInput) {
     return this.database.evidencias.create({
       data,

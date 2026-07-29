@@ -1073,6 +1073,16 @@ paths:
         "403": { $ref: "#/components/responses/Error" }
         "500": { $ref: "#/components/responses/Error" }
         "409": { $ref: "#/components/responses/Error" }
+  /alerts/unread-count:
+    get:
+      tags: [Alertas]
+      summary: Obtener el contador de alertas pendientes sin bloquear la navegación
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "500": { $ref: "#/components/responses/Error" }
   /alerts/{alertId}/attend:
     post:
       tags: [Alertas]

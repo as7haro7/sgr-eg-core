@@ -96,35 +96,39 @@ export class AlertEngineService {
         ...keyControls.map(({ riesgos }) => riesgos.unidad_id),
       ]),
     ];
-    const [
-      analystGroups,
-      complianceGroups,
-      managers,
-      administrators,
-    ] = await Promise.all([
-      Promise.all(
-        unitIds.map(async (unitId) => [
-          unitId,
-          await this.repository.findRecipientsByRoles(
-            ["analista_riesgos"],
-            unitId,
-          ),
-        ] as const),
+    const [analysts, complianceUsers, managers, administrators] =
+      await Promise.all([
+      this.repository.findRecipientsByRolesForUnits(
+        ["analista_riesgos"],
+        unitIds,
       ),
-      Promise.all(
-        unitIds.map(async (unitId) => [
-          unitId,
-          await this.repository.findRecipientsByRoles(
-            ["responsable_cumplimiento"],
-            unitId,
-          ),
-        ] as const),
+      this.repository.findRecipientsByRolesForUnits(
+        ["responsable_cumplimiento"],
+        unitIds,
       ),
       this.repository.findRecipientsByRoles(["gerencia"]),
       this.repository.findRecipientsByRoles(["administrador"]),
     ]);
-    const analystsByUnit = new Map(analystGroups);
-    const complianceByUnit = new Map(complianceGroups);
+    const groupByUnit = (
+      users: Array<{
+        id: string;
+        usuario_unidades: Array<{ unidad_id: string }>;
+      }>,
+    ) => {
+      const groups = new Map<string, Array<{ id: string }>>();
+
+      for (const user of users) {
+        for (const { unidad_id: unitId } of user.usuario_unidades) {
+          const group = groups.get(unitId) ?? [];
+          group.push({ id: user.id });
+          groups.set(unitId, group);
+        }
+      }
+
+      return groups;
+    };
+    const analystsByUnit = groupByUnit(analysts);
+    const complianceByUnit = groupByUnit(complianceUsers);
     const recipientIds = (
       explicit: Array<string | null | undefined>,
       additional: Array<{ id: string }> = [],

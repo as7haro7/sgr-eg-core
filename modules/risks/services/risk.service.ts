@@ -170,6 +170,19 @@ export class RiskService {
     return mapRisk(risk);
   }
 
+  async getDetail(
+    riskId: string,
+    principal: AuthPrincipal,
+  ): Promise<{ risk: RiskSummary; transitions: estado_riesgo[] }> {
+    const risk = await this.getAuthorizedRisk(riskId, principal, "read");
+    const transitions = await this.getAvailableTransitionsForRecord(
+      risk,
+      principal,
+    );
+
+    return { risk: mapRisk(risk), transitions };
+  }
+
   async listOwnerOptions(unitIds?: string[]): Promise<RiskOwnerOption[]> {
     const owners = await this.repository.listActiveOwners(unitIds);
 
@@ -185,6 +198,14 @@ export class RiskService {
     principal: AuthPrincipal,
   ): Promise<estado_riesgo[]> {
     const risk = await this.getAuthorizedRisk(riskId, principal, "read");
+
+    return this.getAvailableTransitionsForRecord(risk, principal);
+  }
+
+  private async getAvailableTransitionsForRecord(
+    risk: RiskRecord,
+    principal: AuthPrincipal,
+  ): Promise<estado_riesgo[]> {
     const transitions = await this.repository.listTransitions(risk.estado);
     const canUpdate = this.authorization.isAllowed(
       principal,

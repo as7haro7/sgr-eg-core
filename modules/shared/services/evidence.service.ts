@@ -215,6 +215,40 @@ export class EvidenceService {
     return result;
   }
 
+  async listAuditFindings(
+    auditId: string,
+    findingIds: string[],
+    principal: AuthPrincipal,
+  ): Promise<Record<string, EvidenceSummary[]>> {
+    if (findingIds.length === 0) return {};
+
+    const parent = await this.resolveParent({
+      entityType: "audit",
+      entityId: auditId,
+    });
+    this.authorization.assertAllowed(
+      principal,
+      "auditorias",
+      "read",
+      parent.context,
+    );
+    const records = await this.repository.listAuditFindings(
+      auditId,
+      findingIds,
+    );
+    const result = Object.fromEntries(
+      findingIds.map((id) => [id, [] as EvidenceSummary[]]),
+    );
+
+    for (const record of records) {
+      if (record.hallazgo_id) {
+        result[record.hallazgo_id]?.push(mapEvidence(record));
+      }
+    }
+
+    return result;
+  }
+
   async createLink(
     input: CreateLinkEvidenceInput,
     principal: AuthPrincipal,

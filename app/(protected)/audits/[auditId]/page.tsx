@@ -15,7 +15,10 @@ import { notFoundOnMissing } from "@/lib/page-error";
 import { AuthorizationService } from "@/modules/auth/services/authorization.service";
 import { getApplicationPrincipal } from "@/modules/auth/services/current-principal.service";
 import { AuditTransitionDialog } from "@/modules/audits/components/audit-transition-dialog";
-import { auditStatusLabels } from "@/modules/audits/constants/audit";
+import {
+  auditStatusLabels,
+  auditTransitions,
+} from "@/modules/audits/constants/audit";
 import { AuditService } from "@/modules/audits/services/audit.service";
 import { auditIdSchema } from "@/modules/audits/validators/audit.validator";
 import { FindingPanel } from "@/modules/findings/components/finding-panel";
@@ -82,36 +85,43 @@ export default async function AuditDetailPage({
     "update",
     context,
   );
-  const transitions = canUpdate
-    ? await auditService.listAvailableTransitions(audit.id, principal)
-    : [];
-  const [evidence, maxEvidenceFileSize] = await Promise.all([
-    evidenceService.list(
-      { entityType: "audit", entityId: audit.id },
-      principal,
-    ),
-    evidenceService.getMaxFileSize(),
-  ]);
-  const [findings, findingUsers, findingRiskOptions] =
+  const transitions = canUpdate ? [...auditTransitions[audit.status]] : [];
+  const needsEvidenceConfiguration =
+    activeSection === "evidence" || activeSection === "findings";
+  const [evidence, maxEvidenceFileSize] = needsEvidenceConfiguration
+    ? await Promise.all([
+        activeSection === "evidence"
+          ? evidenceService.list(
+              { entityType: "audit", entityId: audit.id },
+              principal,
+            )
+          : Promise.resolve([]),
+        evidenceService.getMaxFileSize(),
+      ])
+    : [[], 0];
+  const [findingWorkspace, findingUsers] =
     activeSection === "findings"
       ? await Promise.all([
-          findingService.list(audit.id, principal),
+          findingService.listWorkspace(audit.id, principal),
           auditService.listUserOptions(),
-          findingService.listRiskOptions(audit.id, principal),
         ])
-      : [[], [], []];
-  const evidenceByFinding =
+      : [{ findings: [], riskOptions: [] }, []];
+  const {
+    findings,
+    riskOptions: findingRiskOptions,
+  } = findingWorkspace;
+  const evidenceByFindingMap =
     activeSection === "findings"
-      ? await Promise.all(
-          findings.map(async (finding) => ({
-            findingId: finding.id,
-            items: await evidenceService.list(
-              { entityType: "finding", entityId: finding.id },
-              principal,
-            ),
-          })),
+      ? await evidenceService.listAuditFindings(
+          audit.id,
+          findings.map(({ id }) => id),
+          principal,
         )
-      : [];
+      : {};
+  const evidenceByFinding = findings.map(({ id }) => ({
+    findingId: id,
+    items: evidenceByFindingMap[id] ?? [],
+  }));
 
   return (
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
