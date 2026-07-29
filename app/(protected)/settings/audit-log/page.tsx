@@ -2,8 +2,13 @@ import { ArrowLeft, History, ShieldAlert } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { AuditLogDetails } from "@/modules/audit-log/components/audit-log-details";
 import { getApplicationPrincipal } from "@/modules/auth/services/current-principal.service";
 import { AuditLogService } from "@/modules/audit-log/services/audit-log.service";
+import {
+  auditActionLabel,
+  auditEntityLabel,
+} from "@/modules/audit-log/utils/audit-log-display";
 import { listAuditLogQuerySchema } from "@/modules/audit-log/validators/audit-log.validator";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { parsePageQuery } from "@/modules/shared/validators/query.validator";
@@ -39,6 +44,9 @@ export default async function AuditLogPage({ searchParams }: AuditLogPageProps) 
   });
 
   const logs = await auditLogService.list(query, principal);
+  const firstVisible =
+    logs.total === 0 ? 0 : (logs.page - 1) * logs.pageSize + 1;
+  const lastVisible = Math.min(logs.page * logs.pageSize, logs.total);
 
   return (
     <div className="w-full">
@@ -66,6 +74,16 @@ export default async function AuditLogPage({ searchParams }: AuditLogPageProps) 
           </div>
         </header>
 
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-950">
+          <p>
+            <span className="font-bold">Alcance de consulta:</span>{" "}
+            {scopeLabel(logs.viewScope)}
+          </p>
+          <p className="font-semibold">
+            {logs.total} {logs.total === 1 ? "registro encontrado" : "registros encontrados"}
+          </p>
+        </div>
+
         <form
           className="grid gap-3 border-b border-slate-200 p-4 sm:grid-cols-2 lg:grid-cols-4"
           method="get"
@@ -75,7 +93,7 @@ export default async function AuditLogPage({ searchParams }: AuditLogPageProps) 
             defaultValue={first(raw.search) ?? ""}
             aria-label="Buscar en la bitácora"
             className="form-input"
-            placeholder="Acción, entidad o resultado"
+            placeholder="Acción, entidad, usuario o ID"
           />
           <select
             name="action"
@@ -84,12 +102,13 @@ export default async function AuditLogPage({ searchParams }: AuditLogPageProps) 
             className="form-input"
           >
             <option value="">Todas las acciones</option>
-            <option value="create">Creación automática</option>
+            <option value="insert">Creación automática</option>
             <option value="crear">Creación funcional</option>
             <option value="update">Modificación automática</option>
             <option value="actualizar">Modificación funcional</option>
             <option value="delete">Eliminación automática</option>
             <option value="desactivar">Desactivación</option>
+            <option value="bootstrap">Inicialización del sistema</option>
             <option value="login">Inicio de sesión</option>
             <option value="logout">Cierre de sesión</option>
             <option value="cambiar_password">Cambio de contraseña</option>
@@ -133,22 +152,50 @@ export default async function AuditLogPage({ searchParams }: AuditLogPageProps) 
             <option value="controles">Controles</option>
             <option value="planes_mitigacion">Planes de mitigación</option>
             <option value="acciones_mitigacion">Acciones de mitigación</option>
+            <option value="alertas">Alertas</option>
+            <option value="apetitos_riesgo">Apetitos de riesgo</option>
             <option value="auditorias">Auditorías</option>
+            <option value="categorias_riesgo">Categorías de riesgo</option>
+            <option value="evidencias">Evidencias</option>
             <option value="hallazgos">Hallazgos</option>
             <option value="normativas">Normativas</option>
+            <option value="paises">Países</option>
+            <option value="parametros_sistema">Parámetros del sistema</option>
             <option value="requisitos">Requisitos</option>
             <option value="evaluaciones_cumplimiento">Evaluaciones</option>
             <option value="usuarios">Usuarios</option>
             <option value="roles">Roles</option>
             <option value="sesiones">Sesiones</option>
+            <option value="unidades_negocio">Unidades de negocio</option>
           </select>
+
+          <label className="grid gap-1 text-sm text-slate-700">
+            Registros por página
+            <select
+              name="pageSize"
+              defaultValue={String(query.pageSize)}
+              className="form-input"
+            >
+              <option value="20">20 registros</option>
+              <option value="50">50 registros</option>
+              <option value="100">100 registros</option>
+            </select>
+          </label>
           
-          <button
-            type="submit"
-            className="min-h-11 rounded-lg bg-blue-700 px-4 text-sm font-semibold text-white hover:bg-blue-800"
-          >
-            Aplicar filtros
-          </button>
+          <div className="flex items-end gap-2">
+            <button
+              type="submit"
+              className="min-h-11 rounded-lg bg-blue-700 px-4 text-sm font-semibold text-white hover:bg-blue-800"
+            >
+              Aplicar filtros
+            </button>
+            <Link
+              href="/settings/audit-log"
+              className="inline-flex min-h-11 items-center rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Limpiar
+            </Link>
+          </div>
         </form>
 
         <div className="overflow-x-auto">
@@ -169,7 +216,7 @@ export default async function AuditLogPage({ searchParams }: AuditLogPageProps) 
                     {new Intl.DateTimeFormat("es-BO", {
                       dateStyle: "medium",
                       timeStyle: "medium",
-                      timeZone: "UTC"
+                      timeZone: "America/La_Paz"
                     }).format(log.timestamp)}
                   </td>
                   <td className="px-6 py-4">
@@ -186,29 +233,26 @@ export default async function AuditLogPage({ searchParams }: AuditLogPageProps) 
                       tone={
                         log.action === "delete"
                           ? "danger"
-                          : log.action === "create"
+                          : ["insert", "crear"].includes(log.action)
                             ? "success"
                             : "neutral"
                       }
                     >
-                      {log.action}
+                      {auditActionLabel(log.action)}
                     </StatusBadge>
                   </td>
-                  <td className="px-6 py-4 capitalize">
-                    {log.entity}
-                    <div className="text-xs text-slate-400 font-mono mt-1">ID: {log.entityId}</div>
+                  <td className="px-6 py-4">
+                    <p className="font-medium text-slate-800">
+                      {auditEntityLabel(log.entity)}
+                    </p>
+                    {log.entityId && (
+                      <div className="mt-1 font-mono text-xs text-slate-400">
+                        ID: {log.entityId}
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4">
-                    {log.details ? (
-                      <details className="cursor-pointer">
-                        <summary className="text-blue-700 hover:underline">Ver cambios</summary>
-                        <pre className="mt-2 max-w-xs overflow-auto rounded bg-slate-100 p-2 text-xs text-slate-700">
-                          {JSON.stringify(log.details, null, 2)}
-                        </pre>
-                      </details>
-                    ) : (
-                      <span className="text-slate-400">-</span>
-                    )}
+                    <AuditLogDetails details={log.details} />
                   </td>
                 </tr>
               ))}
@@ -226,42 +270,74 @@ export default async function AuditLogPage({ searchParams }: AuditLogPageProps) 
           </table>
         </div>
 
-        <div className="flex items-center justify-between border-t border-slate-200 p-4">
-          <span className="text-sm text-slate-600">
-            Mostrando {logs.items.length} de {logs.total} registros
-          </span>
-          <div className="flex gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 p-4">
+          <div className="text-sm text-slate-600">
+            <p>
+              Mostrando {firstVisible}–{lastVisible} de {logs.total} registros
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Página {logs.page} de {Math.max(logs.totalPages, 1)}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
             {logs.page > 1 && (
-              <Link
-                href={{
-                  pathname: "/settings/audit-log",
-                  query: {
-                    ...raw,
-                    page: logs.page - 1,
-                  },
-                }}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700"
-              >
+              <PageLink page={1} raw={raw}>
+                Primera
+              </PageLink>
+            )}
+            {logs.page > 1 && (
+              <PageLink page={logs.page - 1} raw={raw}>
                 Anterior
-              </Link>
+              </PageLink>
             )}
             {logs.page < logs.totalPages && (
-              <Link
-                href={{
-                  pathname: "/settings/audit-log",
-                  query: {
-                    ...raw,
-                    page: logs.page + 1,
-                  },
-                }}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700"
-              >
+              <PageLink page={logs.page + 1} raw={raw}>
                 Siguiente
-              </Link>
+              </PageLink>
+            )}
+            {logs.page < logs.totalPages && (
+              <PageLink page={logs.totalPages} raw={raw}>
+                Última
+              </PageLink>
             )}
           </div>
         </div>
       </section>
     </div>
   );
+}
+
+function PageLink({
+  children,
+  page,
+  raw,
+}: {
+  children: React.ReactNode;
+  page: number;
+  raw: Record<string, string | string[] | undefined>;
+}) {
+  return (
+    <Link
+      href={{
+        pathname: "/settings/audit-log",
+        query: { ...raw, page },
+      }}
+      className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+    >
+      {children}
+    </Link>
+  );
+}
+
+function scopeLabel(
+  scope: "asignado" | "combinado" | "global" | "propio" | "unidad",
+): string {
+  const labels = {
+    global: "Global, sin restricción por unidad",
+    unidad: "Registros vinculados a tus unidades",
+    asignado: "Registros de elementos asignados a tu usuario",
+    propio: "Eventos realizados por tu usuario",
+    combinado: "Combinación de tus unidades, asignaciones y actividad propia",
+  };
+  return labels[scope];
 }

@@ -23,12 +23,12 @@ export default function LoginPage() {
           </p>
           <h1
             id="login-title"
-            className="text-2xl font-bold tracking-tight text-slate-950 dark:text-white"
+            className="text-2xl font-bold leading-tight tracking-tight text-slate-950 dark:text-white"
           >
-            Iniciar sesión
+            Sistema de Gestión de Riesgos Empresariales Globales
           </h1>
           <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-            Accede al Sistema de Gestión de Riesgos Empresariales Globales.
+            Inicia sesión para acceder a la plataforma SGR-EG.
           </p>
         </div>
 

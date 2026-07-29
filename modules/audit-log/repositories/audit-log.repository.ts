@@ -61,6 +61,19 @@ export class AuditLogRepository {
             { entidad: { contains: query.search, mode: "insensitive" } },
             { accion: { contains: query.search, mode: "insensitive" } },
             { resultado: { contains: query.search, mode: "insensitive" } },
+            {
+              usuarios: {
+                is: {
+                  nombre: {
+                    contains: query.search,
+                    mode: "insensitive",
+                  },
+                },
+              },
+            },
+            ...(isUuid(query.search)
+              ? [{ entidad_id: query.search }]
+              : []),
           ],
         }
       : undefined;
@@ -255,4 +268,10 @@ export class AuditLogRepository {
       })),
     };
   }
+}
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
 }

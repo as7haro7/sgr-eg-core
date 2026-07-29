@@ -18,4 +18,5 @@ export interface PaginatedAuditLog {
   pageSize: number;
   total: number;
   totalPages: number;
+  viewScope: "asignado" | "combinado" | "global" | "propio" | "unidad";
 }

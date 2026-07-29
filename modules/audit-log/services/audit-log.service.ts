@@ -54,6 +54,11 @@ export class AuditLogService {
     const hasOwnScope = permissions.some(
       ({ scope }) => scope === "propio",
     );
+    const activeScopes = [
+      hasUnitScope && "unidad",
+      hasAssignedScope && "asignado",
+      hasOwnScope && "propio",
+    ].filter(Boolean);
     const result = await this.repository.list(
       query,
       hasGlobalScope
@@ -73,6 +78,15 @@ export class AuditLogService {
       pageSize: query.pageSize,
       total: result.total,
       totalPages: Math.ceil(result.total / query.pageSize),
+      viewScope: hasGlobalScope
+        ? "global"
+        : activeScopes.length > 1
+          ? "combinado"
+          : hasUnitScope
+            ? "unidad"
+            : hasAssignedScope
+              ? "asignado"
+              : "propio",
     };
   }
 }

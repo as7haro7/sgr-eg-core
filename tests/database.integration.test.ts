@@ -3,6 +3,9 @@ import { randomUUID } from "node:crypto";
 import { Client } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { AuditLogRepository } from "@/modules/audit-log/repositories/audit-log.repository";
+import { listAuditLogQuerySchema } from "@/modules/audit-log/validators/audit-log.validator";
+
 const enabled = process.env.RUN_DB_TESTS === "true";
 const databaseIt = enabled ? it : it.skip;
 let client: Client;
@@ -112,6 +115,20 @@ describe("Integridad PostgreSQL", () => {
     ).rejects.toThrow("inmutable");
   });
 
+  databaseIt("carga para Gerencia toda la bitácora global paginada", async () => {
+    const databaseTotal = Number(
+      (await client.query<{ total: string }>(
+        "SELECT count(*)::text AS total FROM bitacora",
+      )).rows[0].total,
+    );
+    const result = await new AuditLogRepository().list(
+      listAuditLogQuerySchema.parse({ page: 1, pageSize: 100 }),
+    );
+
+    expect(result.total).toBe(databaseTotal);
+    expect(result.items).toHaveLength(Math.min(100, databaseTotal));
+  });
+
   databaseIt("mantiene la matriz RBAC alineada para roles críticos", async () => {
     const permissions = await client.query<{
       rol: string;
@@ -125,10 +142,9 @@ describe("Integridad PostgreSQL", () => {
          FROM permisos_rol p
          JOIN roles r ON r.id = p.rol_id
          JOIN modulos m ON m.id = p.modulo_id
-        WHERE (r.nombre = 'propietario_riesgo' AND m.codigo = 'bitacora')
-           OR (r.nombre = 'equipo_tecnico' AND m.codigo = 'bitacora')
+        WHERE m.codigo = 'bitacora'
            OR (r.nombre = 'administrador' AND m.codigo = 'auditorias')
-        ORDER BY r.nombre`,
+        ORDER BY r.nombre, m.codigo`,
     );
 
     expect(permissions.rows).toEqual([
@@ -140,7 +156,35 @@ describe("Integridad PostgreSQL", () => {
         alcance: "global",
       },
       {
+        rol: "administrador",
+        modulo: "bitacora",
+        puede_leer: true,
+        puede_actualizar: false,
+        alcance: "global",
+      },
+      {
+        rol: "analista_riesgos",
+        modulo: "bitacora",
+        puede_leer: true,
+        puede_actualizar: false,
+        alcance: "unidad",
+      },
+      {
+        rol: "auditor_interno",
+        modulo: "bitacora",
+        puede_leer: true,
+        puede_actualizar: false,
+        alcance: "unidad",
+      },
+      {
         rol: "equipo_tecnico",
+        modulo: "bitacora",
+        puede_leer: true,
+        puede_actualizar: false,
+        alcance: "global",
+      },
+      {
+        rol: "gerencia",
         modulo: "bitacora",
         puede_leer: true,
         puede_actualizar: false,
@@ -152,6 +196,13 @@ describe("Integridad PostgreSQL", () => {
         puede_leer: true,
         puede_actualizar: false,
         alcance: "asignado",
+      },
+      {
+        rol: "responsable_cumplimiento",
+        modulo: "bitacora",
+        puede_leer: true,
+        puede_actualizar: false,
+        alcance: "unidad",
       },
     ]);
   });
