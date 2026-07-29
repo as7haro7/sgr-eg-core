@@ -1,4 +1,4 @@
-import { ShieldCheck } from "lucide-react";
+import { FileSpreadsheet, FileText, ShieldCheck, Table2 } from "lucide-react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
@@ -119,15 +119,32 @@ export default async function Home({ searchParams }: HomePageProps) {
           <h2 className="text-lg font-bold text-slate-950">
             Filtros del dashboard
           </h2>
-          <Link
-            href={{
-              pathname: "/api/dashboard/export",
-              query: raw,
-            }}
-            className="rounded-lg border border-blue-300 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
-          >
-            Exportar CSV
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="mr-1 text-xs font-bold tracking-wide text-slate-500 uppercase">
+              Exportar
+            </span>
+            <ExportLink
+              format="csv"
+              label="CSV"
+              raw={raw}
+              icon={<Table2 aria-hidden="true" className="size-4" />}
+              className="border-slate-300 text-slate-700 hover:bg-slate-50"
+            />
+            <ExportLink
+              format="xlsx"
+              label="Excel"
+              raw={raw}
+              icon={<FileSpreadsheet aria-hidden="true" className="size-4" />}
+              className="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+            />
+            <ExportLink
+              format="pdf"
+              label="PDF"
+              raw={raw}
+              icon={<FileText aria-hidden="true" className="size-4" />}
+              className="border-red-300 text-red-700 hover:bg-red-50"
+            />
+          </div>
         </div>
         <form
           method="get"
@@ -228,5 +245,32 @@ export default async function Home({ searchParams }: HomePageProps) {
       <DashboardKPIs summary={summary} areas={dashboardAreas} />
       <DashboardCharts summary={summary} areas={dashboardAreas} />
     </div>
+  );
+}
+
+function ExportLink({
+  className,
+  format,
+  icon,
+  label,
+  raw,
+}: {
+  className: string;
+  format: "csv" | "pdf" | "xlsx";
+  icon: React.ReactNode;
+  label: string;
+  raw: Record<string, string | string[] | undefined>;
+}) {
+  return (
+    <Link
+      href={{
+        pathname: "/api/dashboard/export",
+        query: { ...raw, format },
+      }}
+      className={`inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition ${className}`}
+    >
+      {icon}
+      {label}
+    </Link>
   );
 }

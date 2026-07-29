@@ -1183,13 +1183,31 @@ paths:
   /dashboard/export:
     get:
       tags: [Reportes]
-      summary: Exportar los indicadores filtrados en CSV
+      summary: Exportar los indicadores filtrados en CSV, Excel o PDF
+      parameters:
+        - in: query
+          name: format
+          schema:
+            type: string
+            enum: [csv, xlsx, pdf]
+            default: csv
+        - { in: query, name: countryId, schema: { type: string, format: uuid } }
+        - { in: query, name: unitId, schema: { type: string, format: uuid } }
+        - { in: query, name: categoryId, schema: { type: string, format: uuid } }
+        - { in: query, name: ownerId, schema: { type: string, format: uuid } }
+        - { in: query, name: status, schema: { type: string } }
+        - { in: query, name: periodStart, schema: { type: string, format: date } }
+        - { in: query, name: periodEnd, schema: { type: string, format: date } }
       responses:
         "200":
-          description: Archivo CSV
+          description: Archivo del reporte solicitado
           content:
             text/csv:
               schema: { type: string }
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema: { type: string, format: binary }
+            application/pdf:
+              schema: { type: string, format: binary }
         "400": { $ref: "#/components/responses/Error" }
         "401": { $ref: "#/components/responses/Error" }
         "403": { $ref: "#/components/responses/Error" }

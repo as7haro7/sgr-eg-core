@@ -132,7 +132,8 @@ dentro de `backups/`.
 El contrato está en [`openapi.yaml`](./openapi.yaml). Todas las respuestas JSON
 siguen `{ data, message, errors }`; las descargas de evidencia son redirecciones
 temporales autorizadas a Storage. El dashboard permite exportar los indicadores
-filtrados en CSV y mantiene alias compatibles con las rutas mínimas del informe.
+filtrados en CSV, Excel y PDF, y mantiene alias compatibles con las rutas
+mínimas del informe.
 
 ## Estructura
 

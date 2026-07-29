@@ -271,7 +271,7 @@ Verificar en el dashboard:
 - la celda correcta de la matriz de calor aumenta;
 - los filtros por unidad, categoría, propietario, estado y periodo se combinan;
 - `Limpiar` restaura la vista autorizada;
-- exportar CSV conserva el mismo alcance del usuario.
+- exportar CSV, Excel o PDF conserva los filtros y el mismo alcance del usuario.
 
 ## 9. Caso global C — auditoría y hallazgos
 

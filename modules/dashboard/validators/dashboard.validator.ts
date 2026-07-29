@@ -24,3 +24,7 @@ export const dashboardFilterSchema = z.object({
 );
 
 export type DashboardFilter = z.output<typeof dashboardFilterSchema>;
+
+export const dashboardExportFormatSchema = z
+  .enum(["csv", "xlsx", "pdf"])
+  .default("csv");
