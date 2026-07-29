@@ -84,9 +84,10 @@ export function LoginForm() {
             id="correo"
             type="email"
             autoComplete="email"
+            placeholder="nombre@empresa.com"
             aria-invalid={Boolean(errors.correo)}
             aria-describedby={errors.correo ? "correo-error" : undefined}
-            className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-10 pr-3 text-sm text-slate-950 outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:border-white dark:focus:ring-white/10"
+            className="h-12 w-full rounded-xl border border-slate-300 bg-slate-50 pl-11 pr-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-600/10 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-400/10"
             {...register("correo")}
           />
         </div>
@@ -113,11 +114,12 @@ export function LoginForm() {
             id="password"
             type="password"
             autoComplete="current-password"
+            placeholder="Ingresa tu contraseña"
             aria-invalid={Boolean(errors.password)}
             aria-describedby={
               errors.password ? "password-error" : undefined
             }
-            className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-10 pr-3 text-sm text-slate-950 outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:border-white dark:focus:ring-white/10"
+            className="h-12 w-full rounded-xl border border-slate-300 bg-slate-50 pl-11 pr-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-600/10 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-400/10"
             {...register("password")}
           />
         </div>
@@ -141,7 +143,11 @@ export function LoginForm() {
         </div>
       )}
 
-      <Button className="w-full" type="submit" disabled={isSubmitting}>
+      <Button
+        className="h-12 w-full rounded-xl bg-blue-700 shadow-lg shadow-blue-700/20 hover:bg-blue-800"
+        type="submit"
+        disabled={isSubmitting}
+      >
         {isSubmitting && (
           <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
         )}

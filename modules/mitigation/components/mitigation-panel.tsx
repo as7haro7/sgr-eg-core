@@ -32,8 +32,6 @@ interface MitigationPanelProps {
   plans: MitigationPlanSummary[];
   owners: RiskOwnerOption[];
   canCreate: boolean;
-  canUpdate: boolean;
-  canDeactivate: boolean;
   evidenceByEntityId: Record<string, EvidenceSummary[]>;
   maxEvidenceFileSize: number;
   storageConfigured: boolean;
@@ -41,8 +39,6 @@ interface MitigationPanelProps {
 
 export function MitigationPanel({
   canCreate,
-  canDeactivate,
-  canUpdate,
   evidenceByEntityId,
   maxEvidenceFileSize,
   owners,
@@ -70,14 +66,14 @@ export function MitigationPanel({
               endpoint={`/api/mitigation-plans/${plan.id}`}
               entity={plan}
               owners={owners}
-              disabled={!canUpdate}
-              canDeactivate={canDeactivate}
+              disabled={!plan.canUpdate}
+              canDeactivate={plan.canDeactivate}
             />
             <EvidenceSection
               entityType="plan"
               entityId={plan.id}
               evidence={evidenceByEntityId[plan.id] ?? []}
-              canCreate={canUpdate}
+              canCreate={plan.canUpdate}
               maxFileSizeBytes={maxEvidenceFileSize}
               storageConfigured={storageConfigured}
             />
@@ -92,22 +88,22 @@ export function MitigationPanel({
                       endpoint={`/api/mitigation-actions/${action.id}`}
                       entity={action}
                       owners={owners}
-                      disabled={!canUpdate}
-                      canDeactivate={canDeactivate}
+                      disabled={!action.canUpdate}
+                      canDeactivate={action.canDeactivate}
                       compact
                     />
                     <EvidenceSection
                       entityType="action"
                       entityId={action.id}
                       evidence={evidenceByEntityId[action.id] ?? []}
-                      canCreate={canUpdate}
+                      canCreate={action.canUpdate}
                       maxFileSizeBytes={maxEvidenceFileSize}
                       storageConfigured={storageConfigured}
                     />
                   </div>
                 ))}
               </div>
-              {canCreate && (
+              {plan.canCreateActions && (
                 <div className="mt-4">
                   <MitigationCreateForm
                     endpoint={`/api/mitigation-plans/${plan.id}/actions`}
@@ -256,6 +252,12 @@ function MitigationEditor({
 
   return (
     <>
+      {disabled && (
+        <p className="mb-3 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500 dark:bg-slate-950/50 dark:text-slate-400">
+          Solo el responsable asignado o un rol con alcance superior puede
+          modificar este {compact ? "acción" : "plan"}.
+        </p>
+      )}
       <form
         className={`grid gap-3 ${compact ? "md:grid-cols-6" : "md:grid-cols-5"}`}
         onSubmit={handleSubmit(submit)}

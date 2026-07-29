@@ -12,6 +12,8 @@ export interface MitigationActionSummary {
   dueDate: Date;
   progress: number;
   status: estado_plan;
+  canUpdate: boolean;
+  canDeactivate: boolean;
 }
 
 export interface MitigationPlanSummary {
@@ -21,5 +23,8 @@ export interface MitigationPlanSummary {
   dueDate: Date;
   progress: number;
   status: estado_plan;
+  canUpdate: boolean;
+  canDeactivate: boolean;
+  canCreateActions: boolean;
   actions: MitigationActionSummary[];
 }

@@ -22,7 +22,21 @@ type ActionRecord = Awaited<
   ReturnType<MitigationRepository["createAction"]>
 >;
 
-function mapAction(action: ActionRecord): MitigationActionSummary {
+interface RiskAuthorizationContext {
+  unidad_id: string;
+  propietario_id: string | null;
+  creado_por: string;
+}
+
+interface EntityCapabilities {
+  canUpdate: boolean;
+  canDeactivate: boolean;
+}
+
+function mapAction(
+  action: ActionRecord,
+  capabilities: EntityCapabilities,
+): MitigationActionSummary {
   return {
     id: action.id,
     description: action.descripcion,
@@ -33,10 +47,15 @@ function mapAction(action: ActionRecord): MitigationActionSummary {
     dueDate: action.fecha_limite,
     progress: action.avance.toNumber(),
     status: action.estado,
+    ...capabilities,
   };
 }
 
-function mapPlan(plan: PlanRecord): MitigationPlanSummary {
+function mapPlan(
+  plan: PlanRecord,
+  capabilities: EntityCapabilities & { canCreateActions: boolean },
+  actionCapabilities: (action: ActionRecord) => EntityCapabilities,
+): MitigationPlanSummary {
   return {
     id: plan.id,
     description: plan.descripcion,
@@ -47,7 +66,10 @@ function mapPlan(plan: PlanRecord): MitigationPlanSummary {
     dueDate: plan.fecha_limite,
     progress: plan.avance.toNumber(),
     status: plan.estado,
-    actions: plan.acciones_mitigacion.map(mapAction),
+    ...capabilities,
+    actions: plan.acciones_mitigacion.map((action) =>
+      mapAction(action, actionCapabilities(action)),
+    ),
   };
 }
 
@@ -73,9 +95,14 @@ export class MitigationService {
 
     if (!risk) throw notFound("riesgo");
 
-    this.assertAllowed(principal, "read", risk, []);
+    this.assertAllowed(
+      principal,
+      "read",
+      risk,
+      risk.propietario_id ? [risk.propietario_id] : [],
+    );
 
-    return this.listAfterAuthorizedMutation(riskId);
+    return this.listAfterAuthorizedMutation(riskId, risk, principal);
   }
 
   async createPlan(
@@ -87,7 +114,12 @@ export class MitigationService {
 
     if (!risk) throw notFound("riesgo");
 
-    this.assertAllowed(principal, "create", risk, []);
+    this.assertAllowed(
+      principal,
+      "create",
+      risk,
+      risk.propietario_id ? [risk.propietario_id] : [],
+    );
     await this.assertActiveResponsible(input.responsibleId);
     this.assertDueDate(input.dueDate, new Date());
 
@@ -104,7 +136,7 @@ export class MitigationService {
     });
 
     scheduleAlertEvaluation();
-    return this.listAfterAuthorizedMutation(riskId);
+    return this.listAfterAuthorizedMutation(riskId, risk, principal);
   }
 
   async updatePlan(
@@ -144,7 +176,11 @@ export class MitigationService {
     });
 
     scheduleAlertEvaluation();
-    return this.listAfterAuthorizedMutation(plan.riesgo_id);
+    return this.listAfterAuthorizedMutation(
+      plan.riesgo_id,
+      plan.riesgos,
+      principal,
+    );
   }
 
   async deactivatePlan(
@@ -170,7 +206,11 @@ export class MitigationService {
     });
 
     scheduleAlertEvaluation();
-    return this.listAfterAuthorizedMutation(plan.riesgo_id);
+    return this.listAfterAuthorizedMutation(
+      plan.riesgo_id,
+      plan.riesgos,
+      principal,
+    );
   }
 
   async createAction(
@@ -206,7 +246,11 @@ export class MitigationService {
     });
 
     scheduleAlertEvaluation();
-    return this.listAfterAuthorizedMutation(plan.riesgo_id);
+    return this.listAfterAuthorizedMutation(
+      plan.riesgo_id,
+      plan.riesgos,
+      principal,
+    );
   }
 
   async updateAction(
@@ -230,7 +274,7 @@ export class MitigationService {
       principal,
       "update",
       plan.riesgos,
-      [plan.responsable_id, action.responsable_id],
+      [action.responsable_id],
     );
 
     if (input.responsibleId) {
@@ -256,7 +300,11 @@ export class MitigationService {
     if (!refreshedPlan) throw notFound("plan");
 
     scheduleAlertEvaluation();
-    return this.listAfterAuthorizedMutation(refreshedPlan.riesgo_id);
+    return this.listAfterAuthorizedMutation(
+      refreshedPlan.riesgo_id,
+      refreshedPlan.riesgos,
+      principal,
+    );
   }
 
   async deactivateAction(
@@ -279,7 +327,7 @@ export class MitigationService {
       principal,
       "deactivate",
       plan.riesgos,
-      [plan.responsable_id, action.responsable_id],
+      [action.responsable_id],
     );
 
     await withAuditContext(principal.userId, async (transaction) => {
@@ -292,17 +340,17 @@ export class MitigationService {
     if (!refreshedPlan) throw notFound("plan");
 
     scheduleAlertEvaluation();
-    return this.listAfterAuthorizedMutation(refreshedPlan.riesgo_id);
+    return this.listAfterAuthorizedMutation(
+      refreshedPlan.riesgo_id,
+      refreshedPlan.riesgos,
+      principal,
+    );
   }
 
   private assertAllowed(
     principal: AuthPrincipal,
     action: "create" | "read" | "update" | "deactivate",
-    risk: {
-      unidad_id: string;
-      propietario_id: string | null;
-      creado_por: string;
-    },
+    risk: RiskAuthorizationContext,
     additionalAssignees: string[],
   ) {
     this.authorization.assertAllowed(
@@ -312,10 +360,7 @@ export class MitigationService {
       {
         unitId: risk.unidad_id,
         ownerId: risk.creado_por,
-        assigneeIds: [
-          ...(risk.propietario_id ? [risk.propietario_id] : []),
-          ...additionalAssignees,
-        ],
+        assigneeIds: additionalAssignees,
       },
     );
   }
@@ -334,10 +379,63 @@ export class MitigationService {
 
   private async listAfterAuthorizedMutation(
     riskId: string,
+    risk: RiskAuthorizationContext,
+    principal: AuthPrincipal,
   ): Promise<MitigationPlanSummary[]> {
     const plans = await this.repository.listByRisk(riskId);
 
-    return plans.map(mapPlan);
+    return plans.map((plan) =>
+      mapPlan(
+        plan,
+        {
+          canUpdate: this.isAllowed(
+            principal,
+            "update",
+            risk,
+            [plan.usuarios.id],
+          ),
+          canDeactivate: this.isAllowed(
+            principal,
+            "deactivate",
+            risk,
+            [plan.usuarios.id],
+          ),
+          canCreateActions: this.isAllowed(
+            principal,
+            "create",
+            risk,
+            [plan.usuarios.id],
+          ),
+        },
+        (action) => ({
+          canUpdate: this.isAllowed(
+            principal,
+            "update",
+            risk,
+            [action.usuarios.id],
+          ),
+          canDeactivate: this.isAllowed(
+            principal,
+            "deactivate",
+            risk,
+            [action.usuarios.id],
+          ),
+        }),
+      ),
+    );
+  }
+
+  private isAllowed(
+    principal: AuthPrincipal,
+    action: "create" | "update" | "deactivate",
+    risk: RiskAuthorizationContext,
+    assigneeIds: string[],
+  ) {
+    return this.authorization.isAllowed(principal, "mitigacion", action, {
+      unitId: risk.unidad_id,
+      ownerId: risk.creado_por,
+      assigneeIds,
+    });
   }
 
   private assertDueDate(dueDate: Date, createdAt: Date) {

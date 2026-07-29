@@ -79,7 +79,15 @@ export default async function RiskMitigationPage({ params }: PageProps) {
     ),
     evidenceService.getMaxFileSize(),
   ]);
-  const needsOwners = canCreate || canUpdate;
+  const needsOwners =
+    canCreate ||
+    canUpdate ||
+    plans.some(
+      (plan) =>
+        plan.canUpdate ||
+        plan.canCreateActions ||
+        plan.actions.some((action) => action.canUpdate),
+    );
   const hasGlobalAccess = principal.permissions.some(
     (permission) =>
       permission.module === "mitigacion" &&
@@ -153,8 +161,6 @@ export default async function RiskMitigationPage({ params }: PageProps) {
               plans={plans}
               owners={owners}
               canCreate={canCreate}
-              canUpdate={canUpdate}
-              canDeactivate={canDeactivate}
               evidenceByEntityId={evidenceByEntityId}
               maxEvidenceFileSize={maxEvidenceFileSize}
               storageConfigured={isEvidenceStorageConfigured()}
