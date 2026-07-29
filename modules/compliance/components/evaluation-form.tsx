@@ -22,7 +22,6 @@ import type {
 import {
   createEvaluationSchema,
   type CreateEvaluationFormInput,
-  type CreateEvaluationInput,
 } from "@/modules/compliance/validators/evaluation.validator";
 import type { ApiResponse } from "@/types/api-response";
 
@@ -46,12 +45,8 @@ export function EvaluationForm({
     handleSubmit,
     register,
     watch,
-  } = useForm<
-    CreateEvaluationFormInput,
-    unknown,
-    CreateEvaluationInput
-  >({
-    resolver: zodResolver(createEvaluationSchema),
+  } = useForm<CreateEvaluationFormInput>({
+    resolver: zodResolver(createEvaluationSchema, undefined, { raw: true }),
     mode: "onChange",
     defaultValues: {
       requirementId: evaluation?.requirement.id ?? requirements[0]?.id ?? "",
@@ -71,7 +66,7 @@ export function EvaluationForm({
   });
   const result = watch("result");
 
-  const submit = async (input: CreateEvaluationInput) => {
+  const submit = async (input: CreateEvaluationFormInput) => {
     setFeedback(null);
 
     try {
@@ -88,7 +83,7 @@ export function EvaluationForm({
       const payload = (await response.json()) as ApiResponse<EvaluationSummary>;
 
       if (!response.ok || !payload.data) {
-        setFeedback(payload.message);
+        setFeedback(payload.errors[0]?.message ?? payload.message);
         return;
       }
 

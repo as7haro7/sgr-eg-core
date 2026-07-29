@@ -17,7 +17,6 @@ import type {
 import {
   createAuditSchema,
   type CreateAuditFormInput,
-  type CreateAuditInput,
 } from "@/modules/audits/validators/audit.validator";
 import type { ApiResponse } from "@/types/api-response";
 
@@ -43,8 +42,8 @@ export function AuditForm({
     formState: { errors, isSubmitting },
     handleSubmit,
     register,
-  } = useForm<CreateAuditFormInput, unknown, CreateAuditInput>({
-    resolver: zodResolver(createAuditSchema),
+  } = useForm<CreateAuditFormInput>({
+    resolver: zodResolver(createAuditSchema, undefined, { raw: true }),
     mode: "onChange",
     defaultValues: {
       objective: audit?.objective ?? "",
@@ -57,7 +56,7 @@ export function AuditForm({
     },
   });
 
-  const submit = async (input: CreateAuditInput) => {
+  const submit = async (input: CreateAuditFormInput) => {
     setFeedback(null);
 
     try {
@@ -73,7 +72,9 @@ export function AuditForm({
 
       setFeedback({
         type: response.ok ? "success" : "error",
-        message: payload.message,
+        message: response.ok
+          ? payload.message
+          : payload.errors[0]?.message ?? payload.message,
       });
 
       if (response.ok && payload.data) {

@@ -1,9 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 import type { AuthPrincipal } from "@/modules/auth/types/auth.types";
 import type { AlertRepository } from "@/modules/alerts/repositories/alert.repository";
 import { AlertService } from "@/modules/alerts/services/alert.service";
 import type { ListAlertsQuery } from "@/modules/alerts/validators/alert.validator";
+import { createAuditSchema } from "@/modules/audits/validators/audit.validator";
+import { createEvaluationSchema } from "@/modules/compliance/validators/evaluation.validator";
 import { DashboardRepository } from "@/modules/dashboard/repositories/dashboard.repository";
 import type { DashboardFilter } from "@/modules/dashboard/validators/dashboard.validator";
 import type { RegulationRepository } from "@/modules/regulations/repositories/regulation.repository";
@@ -52,6 +55,54 @@ const alertQuery: ListAlertsQuery = {
 };
 
 describe("Regresiones de bugs reportados", () => {
+  it("envía fechas de auditoría y cumplimiento en el formato esperado por el API", async () => {
+    const auditValues = {
+      objective: "Revisar controles de acceso",
+      scope: "Sistemas críticos de la unidad",
+      startDate: "2026-08-03",
+      endDate: "2026-08-07",
+      responsibleId: USER_ID,
+      unitId: UNIT_ID,
+      teamMemberIds: [],
+    };
+    const evaluationValues = {
+      requirementId: COUNTRY_ID,
+      unitId: UNIT_ID,
+      periodStart: "2026-07-01",
+      periodEnd: "2026-07-31",
+      result: "conforme" as const,
+      observations: "Controles verificados.",
+      notApplicableJustification: "",
+      actionPlan: "",
+      planResponsibleId: "",
+      planDeadline: "",
+    };
+    const resolverOptions = {
+      fields: {},
+      shouldUseNativeValidation: false,
+    };
+
+    const auditResult = await zodResolver(
+      createAuditSchema,
+      undefined,
+      { raw: true },
+    )(auditValues, undefined, resolverOptions);
+    const evaluationResult = await zodResolver(
+      createEvaluationSchema,
+      undefined,
+      { raw: true },
+    )(evaluationValues, undefined, resolverOptions);
+
+    expect(auditResult.values).toEqual(auditValues);
+    expect(evaluationResult.values).toEqual(evaluationValues);
+    expect(JSON.stringify(auditResult.values)).toContain(
+      '"startDate":"2026-08-03"',
+    );
+    expect(JSON.stringify(evaluationResult.values)).toContain(
+      '"periodStart":"2026-07-01"',
+    );
+  });
+
   it("permite administrar normativas del país de una unidad autorizada", async () => {
     const repository = {
       findActiveCountry: vi.fn().mockResolvedValue({ id: COUNTRY_ID }),
