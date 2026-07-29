@@ -13,7 +13,6 @@ import type { RegulationSummary } from "@/modules/regulations/types/regulation.t
 import {
   regulationFormSchema,
   type RegulationFormInput,
-  type RegulationFormOutput,
 } from "@/modules/regulations/validators/regulation.validator";
 import type { ApiResponse } from "@/types/api-response";
 
@@ -34,8 +33,8 @@ export function RegulationForm({
     formState: { errors, isSubmitting },
     handleSubmit,
     register,
-  } = useForm<RegulationFormInput, unknown, RegulationFormOutput>({
-    resolver: zodResolver(regulationFormSchema),
+  } = useForm<RegulationFormInput>({
+    resolver: zodResolver(regulationFormSchema, undefined, { raw: true }),
     mode: "onChange",
     defaultValues: {
       name: regulation?.name ?? "",
@@ -48,7 +47,7 @@ export function RegulationForm({
     },
   });
 
-  const submit = async (input: RegulationFormOutput) => {
+  const submit = async (input: RegulationFormInput) => {
     setFeedback(null);
     try {
       const response = await fetch(

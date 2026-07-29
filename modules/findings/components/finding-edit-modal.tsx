@@ -53,7 +53,7 @@ export function FindingEditModal({ finding, users, canUpdate }: FindingEditModal
         condition: data.condition,
         recommendation: data.recommendation,
         responsibleId: data.responsibleId || null,
-        deadline: data.deadline ? new Date(data.deadline).toISOString() : null,
+        deadline: data.deadline || null,
       };
 
       const res = await fetch(`/api/findings/${finding.id}`, {

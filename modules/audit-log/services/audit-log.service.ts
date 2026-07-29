@@ -34,13 +34,14 @@ export class AuditLogService {
     query: ListAuditLogQuery,
     principal: AuthPrincipal,
   ): Promise<PaginatedAuditLog> {
-    // Solo usuarios con permiso de configuración pueden ver la bitácora
-    this.authorization.assertAllowed(principal, "bitacora", "read");
-
+    // El permiso habilita la consulta; el alcance se aplica al listar.
     const permissions = principal.permissions.filter(
       (permission) =>
         permission.module === "bitacora" && permission.canRead,
     );
+    if (permissions.length === 0) {
+      this.authorization.assertAllowed(principal, "bitacora", "read");
+    }
     const hasGlobalScope = permissions.some(
       ({ scope }) => scope === "global",
     );

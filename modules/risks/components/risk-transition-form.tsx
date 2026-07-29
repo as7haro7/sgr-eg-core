@@ -13,7 +13,6 @@ import type { RiskSummary } from "@/modules/risks/types/risk.types";
 import {
   transitionRiskSchema,
   type TransitionRiskFormInput,
-  type TransitionRiskInput,
 } from "@/modules/risks/validators/risk.validator";
 import type { ApiResponse } from "@/types/api-response";
 
@@ -50,12 +49,8 @@ export function RiskTransitionForm({
     handleSubmit,
     register,
     watch,
-  } = useForm<
-    TransitionRiskFormInput,
-    unknown,
-    TransitionRiskInput
-  >({
-    resolver: zodResolver(transitionRiskSchema),
+  } = useForm<TransitionRiskFormInput>({
+    resolver: zodResolver(transitionRiskSchema, undefined, { raw: true }),
     defaultValues: {
       destination: transitions[0],
       justification: "",
@@ -64,7 +59,7 @@ export function RiskTransitionForm({
   });
   const destination = watch("destination");
 
-  const onSubmit = async (input: TransitionRiskInput) => {
+  const onSubmit = async (input: TransitionRiskFormInput) => {
     setMessage(null);
 
     try {

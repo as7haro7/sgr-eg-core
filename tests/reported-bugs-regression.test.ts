@@ -6,9 +6,13 @@ import type { AlertRepository } from "@/modules/alerts/repositories/alert.reposi
 import { AlertService } from "@/modules/alerts/services/alert.service";
 import type { ListAlertsQuery } from "@/modules/alerts/validators/alert.validator";
 import { createAuditSchema } from "@/modules/audits/validators/audit.validator";
+import type { AuditLogRepository } from "@/modules/audit-log/repositories/audit-log.repository";
+import { AuditLogService } from "@/modules/audit-log/services/audit-log.service";
+import { listAuditLogQuerySchema } from "@/modules/audit-log/validators/audit-log.validator";
 import { createEvaluationSchema } from "@/modules/compliance/validators/evaluation.validator";
 import { DashboardRepository } from "@/modules/dashboard/repositories/dashboard.repository";
 import type { DashboardFilter } from "@/modules/dashboard/validators/dashboard.validator";
+import { createFindingSchema } from "@/modules/findings/validators/finding.validator";
 import type { RegulationRepository } from "@/modules/regulations/repositories/regulation.repository";
 import { RegulationService } from "@/modules/regulations/services/regulation.service";
 import type { RiskRepository } from "@/modules/risks/repositories/risk.repository";
@@ -20,8 +24,8 @@ const COUNTRY_ID = "30000000-0000-4000-8000-000000000001";
 const ROLE_ID = "40000000-0000-4000-8000-000000000001";
 
 function principal(
-  module: "alertas" | "cumplimiento" | "riesgos",
-  scope: "global" | "unidad" | "propio",
+  module: "alertas" | "bitacora" | "cumplimiento" | "riesgos",
+  scope: "asignado" | "global" | "unidad" | "propio",
   actions: { read?: boolean; create?: boolean; update?: boolean },
 ): AuthPrincipal {
   return {
@@ -55,6 +59,51 @@ const alertQuery: ListAlertsQuery = {
 };
 
 describe("Regresiones de bugs reportados", () => {
+  it("conserva la fecha del hallazgo como fecha simple antes de enviarla", async () => {
+    const values = {
+      severity: "alta" as const,
+      condition: "Falta evidencia del control.",
+      recommendation: "Adjuntar y validar la evidencia.",
+      riskId: "",
+      responsibleId: USER_ID,
+      deadline: "2026-09-30",
+      requiresClosingEvidence: true,
+    };
+
+    const result = await zodResolver(
+      createFindingSchema,
+      undefined,
+      { raw: true },
+    )(values, undefined, {
+      fields: {},
+      shouldUseNativeValidation: false,
+    });
+
+    expect(result.values).toEqual(values);
+    expect(JSON.stringify(result.values)).toContain(
+      '"deadline":"2026-09-30"',
+    );
+  });
+
+  it("permite al auditor consultar la bitácora con alcance por unidad", async () => {
+    const list = vi.fn().mockResolvedValue({ items: [], total: 0 });
+    const service = new AuditLogService({
+      list,
+    } as unknown as AuditLogRepository);
+    const query = listAuditLogQuerySchema.parse({});
+
+    await expect(
+      service.list(
+        query,
+        principal("bitacora", "unidad", { read: true }),
+      ),
+    ).resolves.toMatchObject({ items: [], total: 0 });
+    expect(list).toHaveBeenCalledWith(
+      query,
+      expect.objectContaining({ unitIds: [UNIT_ID] }),
+    );
+  });
+
   it("envía fechas de auditoría y cumplimiento en el formato esperado por el API", async () => {
     const auditValues = {
       objective: "Revisar controles de acceso",

@@ -20,9 +20,7 @@ import {
   createMitigationPlanSchema,
   mitigationEditorSchema,
   type CreateMitigationPlanFormInput,
-  type CreateMitigationPlanInput,
   type MitigationEditorFormInput,
-  type MitigationEditorInput,
 } from "@/modules/mitigation/validators/mitigation.validator";
 import type { RiskOwnerOption } from "@/modules/risks/types/risk.types";
 import type { ApiResponse } from "@/types/api-response";
@@ -150,12 +148,8 @@ function MitigationCreateForm({
     handleSubmit,
     register,
     reset,
-  } = useForm<
-    CreateMitigationPlanFormInput,
-    unknown,
-    CreateMitigationPlanInput
-  >({
-    resolver: zodResolver(createMitigationPlanSchema),
+  } = useForm<CreateMitigationPlanFormInput>({
+    resolver: zodResolver(createMitigationPlanSchema, undefined, { raw: true }),
     defaultValues: {
       description: "",
       responsibleId: "",
@@ -164,7 +158,7 @@ function MitigationCreateForm({
     },
   });
 
-  const submit = async (input: CreateMitigationPlanInput) => {
+  const submit = async (input: CreateMitigationPlanFormInput) => {
     const result = await send(endpoint, "POST", input);
     setMessage(result.message);
     if (result.ok) {
@@ -234,12 +228,8 @@ function MitigationEditor({
     formState: { errors, isSubmitting },
     handleSubmit,
     register,
-  } = useForm<
-    MitigationEditorFormInput,
-    unknown,
-    MitigationEditorInput
-  >({
-    resolver: zodResolver(mitigationEditorSchema),
+  } = useForm<MitigationEditorFormInput>({
+    resolver: zodResolver(mitigationEditorSchema, undefined, { raw: true }),
     defaultValues: {
       description: entity.description,
       responsibleId: entity.responsible.id,
@@ -249,7 +239,7 @@ function MitigationEditor({
     },
   });
 
-  const submit = async (input: MitigationEditorInput) => {
+  const submit = async (input: MitigationEditorFormInput) => {
     const result = await send(endpoint, "PATCH", input);
     setMessage(result.message);
     if (result.ok) router.refresh();

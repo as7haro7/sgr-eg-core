@@ -139,6 +139,18 @@ export class RiskConfigurationRepository {
           { vigente_hasta: { gte: validFrom } },
         ],
       },
+      select: {
+        id: true,
+        vigente_desde: true,
+        vigente_hasta: true,
+      },
+    });
+  }
+
+  closeAppetite(appetiteId: string, validUntil: Date) {
+    return this.database.apetitos_riesgo.update({
+      where: { id: appetiteId },
+      data: { vigente_hasta: validUntil },
       select: { id: true },
     });
   }

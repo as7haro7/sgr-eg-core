@@ -30,7 +30,6 @@ import {
   createFindingSchema,
   respondFindingSchema,
   type CreateFindingFormInput,
-  type CreateFindingInput,
   type RespondFindingInput,
 } from "@/modules/findings/validators/finding.validator";
 import { EvidencePanel } from "@/modules/shared/components/evidence-panel";
@@ -101,12 +100,8 @@ export function FindingPanel({
     useState<FindingSummary | null>(null);
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [closing, setClosing] = useState(false);
-  const createForm = useForm<
-    CreateFindingFormInput,
-    unknown,
-    CreateFindingInput
-  >({
-    resolver: zodResolver(createFindingSchema),
+  const createForm = useForm<CreateFindingFormInput>({
+    resolver: zodResolver(createFindingSchema, undefined, { raw: true }),
     mode: "onChange",
     defaultValues: {
       severity: "media",
@@ -131,7 +126,7 @@ export function FindingPanel({
     setFeedback(null);
   };
 
-  const submitCreate = async (input: CreateFindingInput) => {
+  const submitCreate = async (input: CreateFindingFormInput) => {
     setFeedback(null);
     try {
       const response = await fetch(`/api/audits/${auditId}/findings`, {

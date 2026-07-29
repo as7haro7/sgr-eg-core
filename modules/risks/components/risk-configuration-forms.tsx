@@ -17,7 +17,6 @@ import {
   createRiskAppetiteSchema,
   createRiskCategorySchema,
   type CreateRiskAppetiteFormInput,
-  type CreateRiskAppetiteInput,
   type CreateRiskCategoryFormInput,
   type CreateRiskCategoryInput,
 } from "@/modules/risks/validators/risk-configuration.validator";
@@ -162,12 +161,8 @@ function AppetiteForm({
     handleSubmit,
     register,
     reset,
-  } = useForm<
-    CreateRiskAppetiteFormInput,
-    unknown,
-    CreateRiskAppetiteInput
-  >({
-    resolver: zodResolver(createRiskAppetiteSchema),
+  } = useForm<CreateRiskAppetiteFormInput>({
+    resolver: zodResolver(createRiskAppetiteSchema, undefined, { raw: true }),
     defaultValues: {
       categoryId: "",
       unitId: "",
@@ -177,7 +172,7 @@ function AppetiteForm({
     },
   });
 
-  const onSubmit = async (input: CreateRiskAppetiteInput) => {
+  const onSubmit = async (input: CreateRiskAppetiteFormInput) => {
     setFeedback(null);
     const response = await sendJson<RiskAppetiteSummary>(
       "/api/risk-appetites",
@@ -197,6 +192,11 @@ function AppetiteForm({
   return (
     <form className="space-y-4 bg-white p-6" onSubmit={handleSubmit(onSubmit)}>
       <FormTitle icon={<Gauge className="size-4" />} title="Nueva vigencia de apetito" />
+      <p className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm leading-5 text-blue-900">
+        Si existe una vigencia abierta para la misma categoría y unidad, una
+        nueva fecha de inicio posterior cerrará la anterior el día previo. El
+        historial se conserva y no se elimina.
+      </p>
       <Field id="appetite-category" label="Categoría" error={errors.categoryId?.message}>
         <select id="appetite-category" className="form-input" {...register("categoryId")}>
           <option value="">Seleccionar categoría</option>

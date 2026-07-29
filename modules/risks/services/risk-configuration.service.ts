@@ -231,7 +231,16 @@ export class RiskConfigurationService {
       input.validFrom,
       input.validUntil,
     );
-    if (overlap) {
+    const supersededAppetite =
+      overlap &&
+      overlap.vigente_hasta === null &&
+      overlap.vigente_desde < input.validFrom
+        ? {
+            id: overlap.id,
+            validUntil: previousUtcDay(input.validFrom),
+          }
+        : null;
+    if (overlap && !supersededAppetite) {
       throw new AppError(
         "VALIDATION_ERROR",
         "La vigencia se superpone con otra configuración de apetito del mismo alcance.",
@@ -243,6 +252,24 @@ export class RiskConfigurationService {
       actorId,
       async (transaction) => {
         const repository = new RiskConfigurationRepository(transaction);
+        if (supersededAppetite) {
+          await repository.closeAppetite(
+            supersededAppetite.id,
+            supersededAppetite.validUntil,
+          );
+          await repository.recordAudit({
+            usuario_id: actorId,
+            accion: "actualizar",
+            entidad: "apetitos_riesgo",
+            entidad_id: supersededAppetite.id,
+            resultado: "exitoso",
+            detalles: {
+              vigente_hasta:
+                supersededAppetite.validUntil.toISOString().slice(0, 10),
+              motivo: "reemplazada_por_nueva_vigencia",
+            },
+          });
+        }
         const created = await repository.createAppetite({
           categoria_id: input.categoryId,
           unidad_id: input.unitId,
@@ -270,4 +297,10 @@ export class RiskConfigurationService {
 
     return mapAppetite(appetite);
   }
+}
+
+function previousUtcDay(date: Date): Date {
+  const previous = new Date(date);
+  previous.setUTCDate(previous.getUTCDate() - 1);
+  return previous;
 }

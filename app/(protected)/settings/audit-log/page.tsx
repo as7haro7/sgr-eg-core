@@ -45,11 +45,11 @@ export default async function AuditLogPage({ searchParams }: AuditLogPageProps) 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <header className="border-b border-slate-200 p-6 dark:border-slate-800">
           <Link
-            href="/settings?tab=audit-log"
+            href="/"
             className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white"
           >
             <ArrowLeft aria-hidden="true" className="size-4" />
-            Volver a configuración
+            Volver al inicio
           </Link>
           <div className="flex items-center gap-3">
             <div className="flex size-10 items-center justify-center rounded-lg bg-slate-950 text-white dark:bg-white dark:text-slate-950">
